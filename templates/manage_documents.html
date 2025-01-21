@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Documents{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">Document Management</h1>
+        <p class="mt-2 text-sm text-gray-600">Upload and manage documents for tenants and general purposes.</p>
+    </div>
+
+    <!-- Upload Form -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Upload New Document</h2>
+        <form action="{{ url_for('upload_document') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+            <div>
+                <label for="document" class="block text-sm font-medium text-gray-700">Document File</label>
+                <input type="file" id="document" name="document" accept=".pdf,.doc,.docx,.txt" required
+                    class="mt-1 block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-indigo-50 file:text-indigo-700
+                    hover:file:bg-indigo-100">
+            </div>
+            
+            <div>
+                <label for="type" class="block text-sm font-medium text-gray-700">Document Type</label>
+                <select id="type" name="type" required
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="general">General</option>
+                    <option value="lease">Lease Agreement</option>
+                    <option value="notice">Notice</option>
+                    <option value="policy">Policy</option>
+                </select>
+            </div>
+            
+            <div>
+                <label for="tenant_id" class="block text-sm font-medium text-gray-700">Assign to Tenant (Optional)</label>
+                <select id="tenant_id" name="tenant_id"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="">Select Tenant</option>
+                    {% for tenant in tenants %}
+                    <option value="{{ tenant._id }}">{{ tenant.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea id="description" name="description" rows="3"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    placeholder="Enter a description for this document"></textarea>
+            </div>
+            
+            <div>
+                <button type="submit"
+                    class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Upload Document
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Documents List -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">All Documents</h2>
+        </div>
+        
+        <div class="divide-y divide-gray-200" id="documents-list">
+            <div class="p-4 text-center text-gray-500">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                <p class="mt-2">Loading documents...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function loadDocuments() {
+    fetch('/api/documents')
+        .then(response => response.json())
+        .then(documents => {
+            const container = document.getElementById('documents-list');
+            if (documents.length === 0) {
+                container.innerHTML = `
+                    <div class="p-4 text-center text-gray-500">
+                        No documents found
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = documents.map(doc => `
+                <div class="p-4 flex items-center justify-between hover:bg-gray-50">
+                    <div class="flex-1 min-w-0">
+                        <h3 class="text-sm font-medium text-gray-900">
+                            ${doc.original_name}
+                        </h3>
+                        <div class="mt-1 flex items-center text-sm text-gray-500">
+                            <span class="truncate">
+                                ${doc.description || 'No description'}
+                            </span>
+                        </div>
+                        <div class="mt-1 flex items-center text-xs text-gray-500">
+                            <span class="capitalize">${doc.type}</span>
+                            <span class="mx-2">&bull;</span>
+                            <span>${doc.created_at}</span>
+                            ${doc.tenant_id ? `
+                                <span class="mx-2">&bull;</span>
+                                <span>Assigned to tenant</span>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="ml-4 flex-shrink-0">
+                        <a href="/documents/${doc._id}"
+                            class="font-medium text-indigo-600 hover:text-indigo-500">
+                            Download
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+        })
+        .catch(error => {
+            console.error('Error loading documents:', error);
+            document.getElementById('documents-list').innerHTML = `
+                <div class="p-4 text-center text-red-500">
+                    Error loading documents
+                </div>
+            `;
+        });
+}
+
+document.addEventListener('DOMContentLoaded', loadDocuments);
+</script>
+{% endblock %} 

@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Maintenance Request{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Edit Maintenance Request</h1>
+                <p class="mt-1 text-gray-600">Update maintenance request details and track progress</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Form -->
+    <form method="POST" enctype="multipart/form-data" class="space-y-6">
+        <!-- Basic Information -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Request Information</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+                    <select name="category" id="category" required
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="plumbing" {% if request.category == 'plumbing' %}selected{% endif %}>Plumbing</option>
+                        <option value="electrical" {% if request.category == 'electrical' %}selected{% endif %}>Electrical</option>
+                        <option value="hvac" {% if request.category == 'hvac' %}selected{% endif %}>HVAC</option>
+                        <option value="appliance" {% if request.category == 'appliance' %}selected{% endif %}>Appliance</option>
+                        <option value="structural" {% if request.category == 'structural' %}selected{% endif %}>Structural</option>
+                        <option value="other" {% if request.category == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="priority" class="block text-sm font-medium text-gray-700">Priority</label>
+                    <select name="priority" id="priority" required
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="low" {% if request.priority == 'low' %}selected{% endif %}>Low</option>
+                        <option value="medium" {% if request.priority == 'medium' %}selected{% endif %}>Medium</option>
+                        <option value="high" {% if request.priority == 'high' %}selected{% endif %}>High</option>
+                        <option value="emergency" {% if request.priority == 'emergency' %}selected{% endif %}>Emergency</option>
+                    </select>
+                </div>
+                {% if current_user.is_manager() %}
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
+                    <select name="status" id="status" required
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="pending" {% if request.status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="in_progress" {% if request.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                        <option value="completed" {% if request.status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="cancelled" {% if request.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="assigned_to" class="block text-sm font-medium text-gray-700">Assign To</label>
+                    <select name="assigned_to" id="assigned_to"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="">Select Staff</option>
+                        {% for staff in maintenance_staff %}
+                        <option value="{{ staff._id }}" {% if request.assigned_to == staff._id %}selected{% endif %}>
+                            {{ staff.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Description</h2>
+            <div>
+                <label for="description" class="sr-only">Description</label>
+                <textarea name="description" id="description" rows="4" required
+                          class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          placeholder="Describe the maintenance issue">{{ request.description }}</textarea>
+            </div>
+        </div>
+
+        <!-- Images -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Request Images</h2>
+            
+            <!-- Current Images -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                {% if request.images %}
+                {% for image in request.images %}
+                <div class="relative" id="image-{{ loop.index }}">
+                    <img src="{{ url_for('static', filename='uploads/maintenance/' + image) }}"
+                         alt="Maintenance request image"
+                         class="h-32 w-full object-cover rounded-lg">
+                    <button type="button" onclick="removeImage('{{ request._id }}', '{{ image }}', {{ loop.index }})"
+                            class="absolute top-0 right-0 -mt-2 -mr-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 focus:outline-none">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+
+            <!-- Upload New Images -->
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700">Add Images</label>
+                <div class="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                    <div class="space-y-1 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" 
+                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <div class="flex text-sm text-gray-600">
+                            <label for="images" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                                <span>Upload files</span>
+                                <input id="images" name="images" type="file" class="sr-only" multiple accept="image/*" onchange="previewImages(event)">
+                            </label>
+                            <p class="pl-1">or drag and drop</p>
+                        </div>
+                        <p class="text-xs text-gray-500">PNG, JPG, GIF up to 10MB each</p>
+                    </div>
+                </div>
+                <div id="image-preview" class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+            </div>
+        </div>
+
+        {% if current_user.is_manager() %}
+        <!-- Manager Notes -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Manager Notes</h2>
+            <div>
+                <label for="manager_notes" class="sr-only">Manager Notes</label>
+                <textarea name="manager_notes" id="manager_notes" rows="4"
+                          class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          placeholder="Add internal notes about this request">{{ request.manager_notes }}</textarea>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Form Actions -->
+        <div class="flex justify-end space-x-3">
+            <a href="{{ url_for('view_maintenance_requests') }}"
+               class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Cancel
+            </a>
+            <button type="submit"
+                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function previewImages(event) {
+    const container = document.getElementById('image-preview');
+    container.innerHTML = '';
+    
+    const files = event.target.files;
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (!file.type.startsWith('image/')) continue;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const div = document.createElement('div');
+            div.className = 'relative';
+            
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = 'h-32 w-full object-cover rounded-lg';
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'absolute top-0 right-0 -mt-2 -mr-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 focus:outline-none';
+            removeBtn.innerHTML = '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+            removeBtn.onclick = function() {
+                div.remove();
+                // Remove the file from the input
+                const dt = new DataTransfer();
+                const input = document.getElementById('images');
+                const { files } = input;
+                
+                for (let j = 0; j < files.length; j++) {
+                    if (j !== i) dt.items.add(files[j]);
+                }
+                
+                input.files = dt.files;
+            };
+            
+            div.appendChild(img);
+            div.appendChild(removeBtn);
+            container.appendChild(div);
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function removeImage(requestId, imageName, index) {
+    if (!confirm('Are you sure you want to remove this image?')) return;
+    
+    fetch(`/maintenance/request/${requestId}/remove-image/${imageName}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById(`image-${index}`).remove();
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// Add drag and drop support
+const dropZone = document.querySelector('form');
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    
+    document.getElementById('images').files = files;
+    previewImages({ target: { files } });
+});
+</script>
+{% endblock %} 

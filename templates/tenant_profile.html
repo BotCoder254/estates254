@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">My Profile</h1>
+                <p class="mt-1 text-gray-600">View and update your profile information</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Form -->
+    <form method="POST" enctype="multipart/form-data" class="space-y-6" id="profileForm">
+        <!-- Profile Picture -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Profile Picture</h2>
+            <div class="flex items-center space-x-6">
+                <div class="flex-shrink-0">
+                    <img id="profileImage" src="{{ current_user.get_profile_picture_url() }}" 
+                         alt="Profile picture" 
+                         class="h-24 w-24 rounded-full object-cover border-2 border-gray-200">
+                </div>
+                <div>
+                    <label for="profile_picture" class="block text-sm font-medium text-gray-700 mb-2">Change picture</label>
+                    <input type="file" name="profile_picture" id="profile_picture" accept="image/*"
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    <p class="mt-1 text-sm text-gray-500">PNG, JPG up to 5MB</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Personal Information -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Personal Information</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" name="name" id="name" value="{{ current_user.name }}" disabled
+                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-50">
+                </div>
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" name="email" id="email" value="{{ current_user.email }}" disabled
+                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-50">
+                </div>
+                <div>
+                    <label for="phone" class="block text-sm font-medium text-gray-700">Phone</label>
+                    <input type="tel" name="phone" id="phone" value="{{ profile.phone if profile else '' }}"
+                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+            </div>
+        </div>
+
+        <!-- Emergency Contact -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Emergency Contact</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="emergency_contact" class="block text-sm font-medium text-gray-700">Contact Name</label>
+                    <input type="text" name="emergency_contact" id="emergency_contact" 
+                           value="{{ profile.emergency_contact if profile else '' }}"
+                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="emergency_phone" class="block text-sm font-medium text-gray-700">Contact Phone</label>
+                    <input type="tel" name="emergency_phone" id="emergency_phone" 
+                           value="{{ profile.emergency_phone if profile else '' }}"
+                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+            </div>
+        </div>
+
+        <!-- Apartment Information -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Apartment Information</h2>
+            {% set apartment = current_user.get_apartment() %}
+            {% if apartment %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Unit Number</label>
+                    <div class="mt-1 block w-full py-2 text-gray-900">
+                        Unit {{ apartment.unit_number }}
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Floor</label>
+                    <div class="mt-1 block w-full py-2 text-gray-900">
+                        {{ apartment.floor }}
+                    </div>
+                </div>
+                {% set lease = current_user.get_lease() %}
+                {% if lease %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Lease Period</label>
+                    <div class="mt-1 block w-full py-2 text-gray-900">
+                        {{ lease.start_date.strftime('%B %d, %Y') }} to {{ lease.end_date.strftime('%B %d, %Y') }}
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Monthly Rent</label>
+                    <div class="mt-1 block w-full py-2 text-gray-900">
+                        ${{ "%.2f"|format(lease.rent_amount) }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="text-center py-6">
+                <i class="fas fa-home text-gray-300 text-4xl mb-3"></i>
+                <p class="text-gray-500">No apartment assigned yet</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex justify-end space-x-3">
+            <button type="submit"
+                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Real-time data fetching
+function fetchProfileData() {
+    fetch('/api/profile')
+        .then(response => response.json())
+        .then(data => {
+            // Update profile fields
+                document.getElementById('phone').value = data.phone || '';
+                document.getElementById('emergency_contact').value = data.emergency_contact || '';
+                document.getElementById('emergency_phone').value = data.emergency_phone || '';
+            
+            // Update apartment information if available
+            if (data.apartment) {
+                document.querySelector('.apartment-info').innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Unit Number</label>
+                            <div class="mt-1 block w-full py-2 text-gray-900">
+                                Unit ${data.apartment.unit_number}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Floor</label>
+                            <div class="mt-1 block w-full py-2 text-gray-900">
+                                ${data.apartment.floor}
+                            </div>
+                        </div>
+                        ${data.lease ? `
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Lease Period</label>
+                            <div class="mt-1 block w-full py-2 text-gray-900">
+                                ${new Date(data.lease.start_date).toLocaleDateString()} to ${new Date(data.lease.end_date).toLocaleDateString()}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Monthly Rent</label>
+                            <div class="mt-1 block w-full py-2 text-gray-900">
+                                $${parseFloat(data.lease.rent_amount).toFixed(2)}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>`;
+            }
+        })
+        .catch(error => console.error('Error fetching profile data:', error));
+}
+
+// Preview profile picture before upload
+document.getElementById('profile_picture').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('profileImage').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+        
+        // Automatically upload the profile picture
+        const formData = new FormData();
+        formData.append('profile_picture', file);
+        
+        fetch('/upload/profile-picture', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update navigation profile picture
+                const navProfilePic = document.querySelector('.w-8.h-8.rounded-full img');
+                if (navProfilePic) {
+                    navProfilePic.src = data.profile_picture_url;
+                }
+                // Update profile picture
+                document.getElementById('profileImage').src = data.profile_picture_url;
+            } else {
+                alert(data.message || 'Error updating profile picture');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating profile picture');
+        });
+    }
+});
+
+// Fetch profile data every 30 seconds
+fetchProfileData();
+setInterval(fetchProfileData, 30000);
+</script>
+{% endblock %} 

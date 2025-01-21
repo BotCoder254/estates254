@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Submit Maintenance Request{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow rounded-lg">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Submit Maintenance Request</h2>
+                <p class="text-gray-600">Report an issue with your apartment</p>
+            </div>
+            <a href="{{ url_for('view_maintenance_requests') }}" 
+               class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Requests
+            </a>
+        </div>
+    </div>
+    
+    <div class="p-6">
+        <form method="POST" class="space-y-6" enctype="multipart/form-data">
+            <!-- Category -->
+            <div>
+                <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+                <select id="category" name="category" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">Select a category</option>
+                    <option value="plumbing">Plumbing</option>
+                    <option value="electrical">Electrical</option>
+                    <option value="hvac">HVAC</option>
+                    <option value="appliance">Appliance</option>
+                    <option value="structural">Structural</option>
+                    <option value="pest_control">Pest Control</option>
+                    <option value="cleaning">Cleaning</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <!-- Priority -->
+            <div>
+                <label for="priority" class="block text-sm font-medium text-gray-700">Priority Level</label>
+                <select id="priority" name="priority" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="low">Low - Non-urgent issue</option>
+                    <option value="medium">Medium - Needs attention soon</option>
+                    <option value="high">High - Urgent issue</option>
+                    <option value="emergency">Emergency - Immediate attention required</option>
+                </select>
+                <p class="mt-1 text-sm text-gray-500">
+                    Please select emergency only for issues that pose immediate risk to safety or property
+                </p>
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea id="description" name="description" rows="4" required
+                          class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                          placeholder="Please describe the issue in detail. Include when you first noticed it and any relevant details that might help in resolving the issue."></textarea>
+            </div>
+
+            <!-- Location -->
+            <div>
+                <label for="location" class="block text-sm font-medium text-gray-700">Location in Apartment</label>
+                <input type="text" id="location" name="location" required
+                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                       placeholder="e.g., Kitchen, Bathroom, Living Room">
+            </div>
+
+            <!-- Access Instructions -->
+            <div>
+                <label for="access_instructions" class="block text-sm font-medium text-gray-700">Access Instructions</label>
+                <textarea id="access_instructions" name="access_instructions" rows="2"
+                          class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                          placeholder="Any special instructions for accessing the area (optional)"></textarea>
+            </div>
+
+            <!-- Preferred Time -->
+            <div>
+                <label for="preferred_time" class="block text-sm font-medium text-gray-700">Preferred Service Time</label>
+                <select id="preferred_time" name="preferred_time"
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="morning">Morning (9 AM - 12 PM)</option>
+                    <option value="afternoon">Afternoon (12 PM - 5 PM)</option>
+                    <option value="evening">Evening (5 PM - 8 PM)</option>
+                    <option value="any">Any Time</option>
+                </select>
+            </div>
+
+            <!-- Photos -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Photos</label>
+                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                    <div class="space-y-1 text-center">
+                        <i class="fas fa-cloud-upload-alt text-gray-400 text-3xl mb-2"></i>
+                        <div class="flex text-sm text-gray-600">
+                            <label for="photos" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                                <span>Upload photos</span>
+                                <input id="photos" name="photos" type="file" class="sr-only" multiple accept="image/*">
+                            </label>
+                            <p class="pl-1">or drag and drop</p>
+                        </div>
+                        <p class="text-xs text-gray-500">PNG, JPG, GIF up to 10MB each</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex justify-end">
+                <button type="submit" 
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Submit Request
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Preview uploaded images
+document.getElementById('photos').addEventListener('change', function(event) {
+    // Add image preview functionality here
+});
+</script>
+{% endblock %} 

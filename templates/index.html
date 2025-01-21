@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row items-center justify-between min-h-[calc(100vh-16rem)]">
+    <div class="w-full md:w-1/2 pr-0 md:pr-12 mb-8 md:mb-0">
+        <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Welcome to ResidenceHub</h1>
+        <p class="text-xl text-gray-600 mb-8">Your modern solution for apartment management. Experience seamless living with our state-of-the-art platform.</p>
+        <div class="space-y-4">
+            <div class="flex items-center">
+                <i class="fas fa-shield-alt text-indigo-600 text-xl w-8"></i>
+                <span class="ml-4 text-gray-700">Secure and reliable property management</span>
+            </div>
+            <div class="flex items-center">
+                <i class="fas fa-home text-indigo-600 text-xl w-8"></i>
+                <span class="ml-4 text-gray-700">Easy maintenance request tracking</span>
+            </div>
+            <div class="flex items-center">
+                <i class="fas fa-comments text-indigo-600 text-xl w-8"></i>
+                <span class="ml-4 text-gray-700">Seamless communication between tenants and managers</span>
+            </div>
+        </div>
+        <div class="mt-8">
+            <a href="{{ url_for('register') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg text-lg font-medium inline-block">Get Started</a>
+            <a href="{{ url_for('login') }}" class="ml-4 text-indigo-600 hover:text-indigo-700 px-6 py-3 rounded-lg text-lg font-medium inline-block">Sign In</a>
+        </div>
+    </div>
+    <div class="w-full md:w-1/2">
+        <img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" 
+             alt="Modern Apartment Building" 
+             class="rounded-lg shadow-2xl w-full h-auto">
+    </div>
+</div>
+{% endblock %} 

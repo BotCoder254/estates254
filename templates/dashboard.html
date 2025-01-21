@@ -1,0 +1,675 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Welcome Section -->
+    <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Welcome back, {{ current_user.name }}!</h1>
+                <p class="mt-1 text-gray-600">
+                    {% if current_user.is_manager() %}
+                    Manage your property and monitor key metrics
+                    {% else %}
+                    Stay updated with your residence information
+                    {% endif %}
+                </p>
+            </div>
+            <div class="hidden sm:block">
+                <span class="text-sm text-gray-500">{{ datetime.now().strftime('%B %d, %Y') }}</span>
+            </div>
+        </div>
+    </div>
+
+    {% if current_user.is_manager() %}
+    <!-- Manager Dashboard -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Total Units -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-indigo-50 text-indigo-600">
+                    <i class="fas fa-building text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Total Units</p>
+                    <div class="flex items-baseline">
+                        <p class="text-2xl font-semibold text-gray-900">{{ apartments|length }}</p>
+                        <p class="ml-2 text-sm text-gray-500">units</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <a href="{{ url_for('manage_apartments') }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                    View all units <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Total Tenants -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-50 text-green-600">
+                    <i class="fas fa-users text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Total Tenants</p>
+                    <div class="flex items-baseline">
+                        <p class="text-2xl font-semibold text-gray-900">{{ tenants|length }}</p>
+                        <p class="ml-2 text-sm text-gray-500">tenants</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <a href="{{ url_for('manage_tenants') }}" class="text-sm font-medium text-green-600 hover:text-green-500">
+                    Manage tenants <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Active Requests -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-yellow-50 text-yellow-600">
+                    <i class="fas fa-tools text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Active Requests</p>
+                    <div class="flex items-baseline">
+                        <p class="text-2xl font-semibold text-gray-900" id="activeRequests">-</p>
+                        <p class="ml-2 text-sm text-gray-500">pending</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <a href="{{ url_for('view_maintenance_requests') }}" class="text-sm font-medium text-yellow-600 hover:text-yellow-500">
+                    View requests <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Urgent Issues -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-red-50 text-red-600">
+                    <i class="fas fa-exclamation-circle text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Urgent Issues</p>
+                    <div class="flex items-baseline">
+                        <p class="text-2xl font-semibold text-gray-900" id="urgentIssues">-</p>
+                        <p class="ml-2 text-sm text-gray-500">critical</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <a href="{{ url_for('view_maintenance_requests') }}?priority=emergency" class="text-sm font-medium text-red-600 hover:text-red-500">
+                    View urgent issues <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Add Announcements Card -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-50 text-purple-600">
+                    <i class="fas fa-bullhorn text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Announcements</p>
+                    <div class="flex items-baseline">
+                        <p class="text-2xl font-semibold text-gray-900" id="announcementCount">-</p>
+                        <p class="ml-2 text-sm text-gray-500">posted</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <a href="{{ url_for('manage_announcements') }}" class="text-sm font-medium text-purple-600 hover:text-purple-500">
+                    Manage announcements <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Occupancy Chart -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Occupancy Overview</h3>
+            <div class="h-64">
+                <canvas id="occupancyChart"></canvas>
+            </div>
+        </div>
+        <!-- Maintenance Requests Chart -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Maintenance Requests</h3>
+            <div class="h-64">
+                <canvas id="maintenanceChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reminders Section -->
+    <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Upcoming Reminders</h3>
+            <div class="flex-shrink-0">
+                <i class="fas fa-bell text-indigo-600"></i>
+            </div>
+        </div>
+        <div class="space-y-4" id="remindersContainer">
+            <div class="flex items-center justify-center h-24 text-gray-500">
+                <i class="fas fa-spinner fa-spin mr-2"></i>
+                Loading reminders...
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Recent Activity</h3>
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-history text-gray-400"></i>
+            </div>
+        </div>
+        <div class="flow-root">
+            <ul class="-mb-8" id="recentActivity">
+                <li class="text-center text-gray-500 py-4">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>
+                    Loading recent activity...
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Tenant Dashboard -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Apartment Info -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Your Apartment</h3>
+                <div class="p-2 rounded-full bg-indigo-50 text-indigo-600">
+                    <i class="fas fa-home"></i>
+                </div>
+            </div>
+            {% if apartment %}
+            <dl class="grid grid-cols-1 gap-4">
+                <div class="flex justify-between py-3 border-b border-gray-100">
+                    <dt class="text-sm font-medium text-gray-500">Unit Number</dt>
+                    <dd class="text-sm font-semibold text-gray-900">{{ apartment.unit_number }}</dd>
+                </div>
+                <div class="flex justify-between py-3 border-b border-gray-100">
+                    <dt class="text-sm font-medium text-gray-500">Floor</dt>
+                    <dd class="text-sm font-semibold text-gray-900">{{ apartment.floor }}</dd>
+                </div>
+                <div class="flex justify-between py-3">
+                    <dt class="text-sm font-medium text-gray-500">Type</dt>
+                    <dd class="text-sm font-semibold text-gray-900">{{ apartment.type }}</dd>
+                </div>
+            </dl>
+            {% else %}
+            <div class="text-center py-6">
+                <i class="fas fa-home text-gray-300 text-4xl mb-3"></i>
+                <p class="text-gray-500">No apartment assigned yet</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Maintenance Requests -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Your Maintenance Requests</h3>
+                <div class="p-2 rounded-full bg-yellow-50 text-yellow-600">
+                    <i class="fas fa-tools"></i>
+                </div>
+            </div>
+            <div id="tenantRequests" class="space-y-4">
+                <div class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin text-gray-400 mr-2"></i>
+                    <span class="text-gray-500">Loading requests...</span>
+                </div>
+            </div>
+            <div class="mt-6">
+                <a href="{{ url_for('submit_maintenance_request') }}" 
+                   class="flex items-center justify-center w-full px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <i class="fas fa-plus mr-2"></i>
+                    Submit New Request
+                </a>
+            </div>
+        </div>
+
+        <!-- Important Notices -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Important Notices</h3>
+                <div class="p-2 rounded-full bg-blue-50 text-blue-600">
+                    <i class="fas fa-bell"></i>
+                </div>
+            </div>
+            <div id="tenantNotices" class="space-y-4">
+                <div class="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle text-yellow-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-yellow-700">No new notices at this time</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reminders Section -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Upcoming Reminders</h3>
+                <div class="p-2 rounded-full bg-indigo-50 text-indigo-600">
+                    <i class="fas fa-bell"></i>
+                </div>
+            </div>
+            <div class="space-y-4" id="remindersContainer">
+                <div class="flex items-center justify-center h-24 text-gray-500">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>
+                    Loading reminders...
+                </div>
+            </div>
+        </div>
+
+        <!-- Announcements -->
+        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Announcements</h3>
+                <div class="p-2 rounded-full bg-purple-50 text-purple-600">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
+            </div>
+            <div id="announcements" class="space-y-4">
+                <div class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin text-gray-400 mr-2"></i>
+                    <span class="text-gray-500">Loading announcements...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if current_user.is_manager() %}
+    // Fetch real-time data for manager dashboard
+    fetch('/api/dashboard/stats')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('activeRequests').textContent = data.active_requests;
+            document.getElementById('urgentIssues').textContent = data.urgent_issues;
+            
+            // Occupancy Chart
+            const occupancyData = {
+                labels: ['Occupied', 'Vacant'],
+                datasets: [{
+                    data: [data.occupied_units, data.total_units - data.occupied_units],
+                    backgroundColor: ['#4F46E5', '#E5E7EB']
+                }]
+            };
+
+            // Maintenance Requests Chart
+            const maintenanceData = {
+                labels: ['Pending', 'In Progress', 'Completed'],
+                datasets: [{
+                    label: 'Maintenance Requests',
+                    data: [data.pending_requests, data.in_progress_requests, data.completed_requests],
+                    backgroundColor: ['#FCD34D', '#60A5FA', '#34D399'],
+                    borderRadius: 4
+                }]
+            };
+
+            // Apply chart options to both charts
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 15
+                        }
+                    }
+                }
+            };
+
+            const occupancyChart = new Chart(
+                document.getElementById('occupancyChart').getContext('2d'),
+                {
+                    type: 'pie',
+                    data: occupancyData,
+                    options: chartOptions
+                }
+            );
+
+            const maintenanceChart = new Chart(
+                document.getElementById('maintenanceChart').getContext('2d'),
+                {
+                    type: 'bar',
+                    data: maintenanceData,
+                    options: chartOptions
+                }
+            );
+
+            // Fetch announcements count
+            fetch('/api/announcements')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('announcementCount').textContent = data.announcements.length;
+                });
+        });
+
+    // Fetch recent activity
+    fetch('/api/dashboard/activity')
+        .then(response => response.json())
+        .then(data => {
+            const activityList = document.getElementById('recentActivity');
+            activityList.innerHTML = data.activities.map(activity => `
+                <li class="relative pb-8">
+                    <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
+                    <div class="relative flex space-x-3">
+                        <div>
+                            <span class="h-8 w-8 rounded-full ${activity.iconBg} flex items-center justify-center ring-8 ring-white">
+                                <i class="fas ${activity.icon} text-white"></i>
+                            </span>
+                        </div>
+                        <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                            <div>
+                                <p class="text-sm text-gray-500">${activity.description}</p>
+                            </div>
+                            <div class="text-right text-sm whitespace-nowrap text-gray-500">
+                                ${activity.time}
+                            </div>
+                        </div>
+                    </div>
+                </li>
+            `).join('');
+        });
+
+    // Fetch tenant's maintenance requests
+    fetch('/api/tenant/requests')
+        .then(response => response.json())
+        .then(data => {
+            const requestsList = document.getElementById('tenantRequests');
+            if (data.requests.length === 0) {
+                requestsList.innerHTML = `
+                    <div class="text-center py-6">
+                        <i class="fas fa-clipboard-list text-gray-300 text-4xl mb-3"></i>
+                        <p class="text-gray-500">No maintenance requests</p>
+                    </div>
+                `;
+            } else {
+                requestsList.innerHTML = data.requests.map(request => `
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div class="flex items-center space-x-3">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-tools text-gray-400"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-900">${request.category}</p>
+                                <p class="text-sm text-gray-500">${request.status}</p>
+                            </div>
+                        </div>
+                        <a href="/maintenance/request/${request._id}" 
+                           class="flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                            View Details
+                            <i class="fas fa-chevron-right ml-2"></i>
+                        </a>
+                    </div>
+                `).join('');
+            }
+        });
+
+    // Fetch announcements
+    fetch('/api/announcements')
+        .then(response => response.json())
+        .then(data => {
+            const announcementsList = document.getElementById('announcements');
+            if (data.announcements.length === 0) {
+                announcementsList.innerHTML = `
+                    <div class="text-center py-6">
+                        <i class="fas fa-bullhorn text-gray-300 text-4xl mb-3"></i>
+                        <p class="text-gray-500">No announcements at this time</p>
+                    </div>
+                `;
+            } else {
+                announcementsList.innerHTML = data.announcements.map(announcement => `
+                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div class="flex items-start space-x-3">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2">
+                                    <h4 class="font-medium text-gray-900">${announcement.title}</h4>
+                                    ${announcement.priority === 'urgent' ? `
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                                            Urgent
+                                        </span>
+                                    ` : ''}
+                                </div>
+                                <p class="mt-1 text-sm text-gray-600">${announcement.content}</p>
+                                <div class="mt-2 flex items-center text-xs text-gray-500">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    <span>${announcement.created_at}</span>
+                                    <span class="mx-2">•</span>
+                                    <i class="fas fa-user mr-1"></i>
+                                    <span>Posted by ${announcement.created_by}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        });
+
+    // Update chart sizes
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    boxWidth: 12,
+                    padding: 15
+                }
+            }
+        }
+    };
+
+    // Add reminders functionality
+    function loadReminders() {
+        fetch('/api/reminders')
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                const container = document.getElementById('remindersContainer');
+                container.innerHTML = '';
+
+                if (data.reminders.length === 0) {
+                    container.innerHTML = 
+                        '<div class="text-center text-gray-500 py-4">' +
+                        'No upcoming reminders' +
+                        '</div>';
+                    return;
+                }
+
+                data.reminders.forEach(function(reminder) {
+                    const reminderEl = document.createElement('div');
+                    reminderEl.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-lg';
+                    
+                    let icon = reminder.type === 'rent_due' ? 'fa-dollar-sign' : 'fa-calendar';
+                    let color = reminder.type === 'rent_due' ? 'text-green-600' : 'text-blue-600';
+                    let title = reminder.type === 'rent_due' ? 'Rent Payment Due' : 'Lease Renewal';
+                    let description = reminder.tenant_name ? 
+                        title + ' - ' + reminder.tenant_name : 
+                        title;
+
+                    reminderEl.innerHTML = 
+                        '<div class="flex items-center">' +
+                        '<div class="flex-shrink-0">' +
+                        '<i class="fas ' + icon + ' ' + color + '"></i>' +
+                        '</div>' +
+                        '<div class="ml-4">' +
+                        '<p class="text-sm font-medium text-gray-900">' + description + '</p>' +
+                        '<p class="text-sm text-gray-500">Due: ' + reminder.due_date + '</p>' +
+                        '</div>' +
+                        '</div>';
+                    container.appendChild(reminderEl);
+                });
+            })
+            .catch(function(error) {
+                console.error('Error loading reminders:', error);
+                const container = document.getElementById('remindersContainer');
+                container.innerHTML = 
+                    '<div class="text-center text-red-500 py-4">' +
+                    'Error loading reminders' +
+                    '</div>';
+            });
+    }
+
+    // Load reminders when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadReminders();
+        // Reload reminders every 5 minutes
+        setInterval(loadReminders, 300000);
+    });
+
+    {% else %}
+    // Fetch tenant's maintenance requests
+    fetch('/api/tenant/requests')
+        .then(response => response.json())
+        .then(data => {
+            const requestsList = document.getElementById('tenantRequests');
+            if (data.requests.length === 0) {
+                requestsList.innerHTML = `
+                    <div class="text-center py-6">
+                        <i class="fas fa-clipboard-list text-gray-300 text-4xl mb-3"></i>
+                        <p class="text-gray-500">No maintenance requests</p>
+                    </div>
+                `;
+            } else {
+                requestsList.innerHTML = data.requests.map(request => `
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div class="flex items-center space-x-3">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-tools text-gray-400"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-900">${request.category}</p>
+                                <p class="text-sm text-gray-500">${request.status}</p>
+                            </div>
+                        </div>
+                        <a href="/maintenance/request/${request._id}" 
+                           class="flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                            View Details
+                            <i class="fas fa-chevron-right ml-2"></i>
+                        </a>
+                    </div>
+                `).join('');
+            }
+        });
+
+    // Load reminders
+    function loadReminders() {
+        fetch('/api/reminders')
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                const container = document.getElementById('remindersContainer');
+                container.innerHTML = '';
+
+                if (data.reminders.length === 0) {
+                    container.innerHTML = 
+                        '<div class="text-center text-gray-500 py-4">' +
+                        'No upcoming reminders' +
+                        '</div>';
+                    return;
+                }
+
+                data.reminders.forEach(function(reminder) {
+                    const reminderEl = document.createElement('div');
+                    reminderEl.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-lg';
+                    
+                    let icon = reminder.type === 'rent_due' ? 'fa-dollar-sign' : 'fa-calendar';
+                    let color = reminder.type === 'rent_due' ? 'text-green-600' : 'text-blue-600';
+                    let title = reminder.type === 'rent_due' ? 'Rent Payment Due' : 'Lease Renewal';
+                    let description = title;
+
+                    reminderEl.innerHTML = 
+                        '<div class="flex items-center">' +
+                        '<div class="flex-shrink-0">' +
+                        '<i class="fas ' + icon + ' ' + color + '"></i>' +
+                        '</div>' +
+                        '<div class="ml-4">' +
+                        '<p class="text-sm font-medium text-gray-900">' + description + '</p>' +
+                        '<p class="text-sm text-gray-500">Due: ' + reminder.due_date + '</p>' +
+                        '</div>' +
+                        '</div>';
+                    container.appendChild(reminderEl);
+                });
+            })
+            .catch(function(error) {
+                console.error('Error loading reminders:', error);
+                const container = document.getElementById('remindersContainer');
+                container.innerHTML = 
+                    '<div class="text-center text-red-500 py-4">' +
+                    'Error loading reminders' +
+                    '</div>';
+            });
+    }
+
+    // Initialize reminders
+    loadReminders();
+    // Reload reminders every 5 minutes
+    setInterval(loadReminders, 300000);
+
+    // Fetch announcements
+    fetch('/api/announcements')
+        .then(response => response.json())
+        .then(data => {
+            const announcementsList = document.getElementById('announcements');
+            if (data.announcements.length === 0) {
+                announcementsList.innerHTML = `
+                    <div class="text-center py-6">
+                        <i class="fas fa-bullhorn text-gray-300 text-4xl mb-3"></i>
+                        <p class="text-gray-500">No announcements at this time</p>
+                    </div>
+                `;
+            } else {
+                announcementsList.innerHTML = data.announcements.map(announcement => `
+                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div class="flex items-start space-x-3">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2">
+                                    <h4 class="font-medium text-gray-900">${announcement.title}</h4>
+                                    ${announcement.priority === 'urgent' ? `
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                                            Urgent
+                                        </span>
+                                    ` : ''}
+                                </div>
+                                <p class="mt-1 text-sm text-gray-600">${announcement.content}</p>
+                                <div class="mt-2 flex items-center text-xs text-gray-500">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    <span>${announcement.created_at}</span>
+                                    <span class="mx-2">•</span>
+                                    <i class="fas fa-user mr-1"></i>
+                                    <span>Posted by ${announcement.created_by}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        });
+    {% endif %}
+});
+</script>
+{% endblock %} 
