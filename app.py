@@ -1512,7 +1512,7 @@ def update_profile():
 def get_payment_history():
     """Get payment history for the current user or all tenants for managers."""
     if current_user.is_manager():
-        # Get all payments for managers (including pending and completed)
+        # Get all payments for managers
         payments = list(payments_collection.find().sort('payment_date', -1))
         # Add tenant details to each payment
         for payment in payments:
@@ -1520,127 +1520,11 @@ def get_payment_history():
             if tenant:
                 payment['tenant_name'] = tenant['name']
                 payment['tenant_email'] = tenant['email']
-                # Get apartment details
-                lease = lease_collection.find_one({'tenant_id': payment['tenant_id']})
-                if lease:
-                    apartment = apartments_collection.find_one({'_id': lease['apartment_id']})
-                    if apartment:
-                        apartment_details = {
-                            'apartment_number': apartment['apartment_number'],
-                            'floor': apartment['floor'],
-                            'monthly_rent': apartment['monthly_rent'],
-                            'lease_start': lease['start_date'].strftime('%Y-%m-%d'),
-                            'lease_end': lease['end_date'].strftime('%Y-%m-%d'),
-                            'payment_status': lease['payment_status']
-                        }
-                        payment.update(apartment_details)
-            
-            # Check status of pending payments
-            if payment['payment_status'] == 'pending' and payment.get('transaction_id'):
-                try:
-                    # Query M-Pesa for status
-                    access_token = get_access_token()
-                    url = "https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query"
-                    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-                    
-                    password_str = f"4121151{'68cb945afece7b529b4a0901b2d8b1bb3bd9daa19bfdb48c69bec8dde962a932'}{timestamp}"
-                    password = base64.b64encode(password_str.encode()).decode('utf-8')
-
-                    headers = {
-                        "Authorization": f"Bearer {access_token}",
-                        "Content-Type": "application/json"
-                    }
-
-                    payload = {
-                        "BusinessShortCode": "4121151",
-                        "Password": password,
-                        "Timestamp": timestamp,
-                        "CheckoutRequestID": payment['transaction_id']
-                    }
-
-                    response = requests.post(url, json=payload, headers=headers)
-                    response.raise_for_status()
-                    result = response.json()
-                    
-                    # Update payment status based on query result
-                    if result.get('ResultCode') == '0':
-                        payments_collection.update_one(
-                            {'_id': payment['_id']},
-                            {'$set': {
-                                'payment_status': 'completed',
-                                'completed_at': datetime.utcnow(),
-                                'mpesa_query_response': result
-                            }}
-                        )
-                        payment['payment_status'] = 'completed'
-                    elif result.get('ResultCode') == '1037':  # Timeout
-                        payments_collection.update_one(
-                            {'_id': payment['_id']},
-                            {'$set': {
-                                'payment_status': 'failed',
-                                'error_message': 'Payment request timed out',
-                                'mpesa_query_response': result
-                            }}
-                        )
-                        payment['payment_status'] = 'failed'
-                except Exception as e:
-                    logging.error(f"Error querying payment status: {str(e)}")
     else:
-        # Get all payments for tenant (including pending and completed)
+        # Get tenant's own payments
         payments = list(payments_collection.find({
             'tenant_id': ObjectId(current_user.id)
         }).sort('payment_date', -1))
-        
-        # Check status of pending payments
-        for payment in payments:
-            if payment['payment_status'] == 'pending' and payment.get('transaction_id'):
-                try:
-                    # Query M-Pesa for status
-                    access_token = get_access_token()
-                    url = "https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query"
-                    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-                    
-                    password_str = f"4121151{'68cb945afece7b529b4a0901b2d8b1bb3bd9daa19bfdb48c69bec8dde962a932'}{timestamp}"
-                    password = base64.b64encode(password_str.encode()).decode('utf-8')
-
-                    headers = {
-                        "Authorization": f"Bearer {access_token}",
-                        "Content-Type": "application/json"
-                    }
-
-                    payload = {
-                        "BusinessShortCode": "4121151",
-                        "Password": password,
-                        "Timestamp": timestamp,
-                        "CheckoutRequestID": payment['transaction_id']
-                    }
-
-                    response = requests.post(url, json=payload, headers=headers)
-                    response.raise_for_status()
-                    result = response.json()
-                    
-                    # Update payment status based on query result
-                    if result.get('ResultCode') == '0':
-                        payments_collection.update_one(
-                            {'_id': payment['_id']},
-                            {'$set': {
-                                'payment_status': 'completed',
-                                'completed_at': datetime.utcnow(),
-                                'mpesa_query_response': result
-                            }}
-                        )
-                        payment['payment_status'] = 'completed'
-                    elif result.get('ResultCode') == '1037':  # Timeout
-                        payments_collection.update_one(
-                            {'_id': payment['_id']},
-                            {'$set': {
-                                'payment_status': 'failed',
-                                'mpesa_callback': result
-                            }}
-                        )
-                        payment['payment_status'] = 'failed'
-                except Exception as e:
-                    logging.error(f"Error querying payment status: {str(e)}")
     
     # Format payments for JSON response
     formatted_payments = []
@@ -1652,16 +1536,12 @@ def get_payment_history():
             'payment_status': payment['payment_status'],
             'payment_method': payment['payment_method'],
             'transaction_id': payment.get('transaction_id', ''),
-            'tenant_id': str(payment['tenant_id']),
             'error_message': payment.get('error_message', '')
         }
         if current_user.is_manager():
             formatted_payment.update({
                 'tenant_name': payment.get('tenant_name', 'Unknown'),
-                'tenant_email': payment.get('tenant_email', ''),
-                'apartment_number': payment.get('apartment_number', ''),
-                'apartment_floor': payment.get('apartment_floor', ''),
-                'monthly_rent': payment.get('monthly_rent', 0)
+                'tenant_email': payment.get('tenant_email', '')
             })
         formatted_payments.append(formatted_payment)
     
@@ -1939,6 +1819,7 @@ def get_access_token():
         raise
 
 @app.route('/stkpush', methods=['POST'])
+@login_required
 def stk_push():
     """STK push route."""
     # Log received request
@@ -2006,7 +1887,23 @@ def stk_push():
             return jsonify({"error": f"M-Pesa API returned status code {response.status_code}", "details": response.text}), 500
             
         response.raise_for_status()
-        return jsonify(response.json())
+        response_data = response.json()
+
+        # Create payment record in database
+        if response_data.get('ResponseCode') == '0':
+            payment_data = {
+                'tenant_id': ObjectId(current_user.id),
+                'amount_paid': amount,
+                'payment_date': datetime.utcnow(),
+                'payment_status': 'pending',
+                'payment_method': 'mpesa',
+                'transaction_id': response_data.get('CheckoutRequestID'),
+                'created_at': datetime.utcnow(),
+                'mpesa_response': response_data
+            }
+            payments_collection.insert_one(payment_data)
+
+        return jsonify(response_data)
 
     except requests.exceptions.RequestException as e:
         logging.error(f"Request failed: {str(e)}")
@@ -2051,7 +1948,29 @@ def query():
         logging.info(f"Query response status: {response.status_code}")
         logging.info(f"Query response: {response.text}")
         response.raise_for_status()
-        return jsonify(response.json())
+        result = response.json()
+
+        # Update payment status in database if successful
+        if result.get('ResultCode') == '0':
+            payments_collection.update_one(
+                {'transaction_id': query_code},
+                {'$set': {
+                    'payment_status': 'completed',
+                    'completed_at': datetime.utcnow(),
+                    'mpesa_query_response': result
+                }}
+            )
+        elif result.get('ResultCode') == '1037':  # Timeout
+            payments_collection.update_one(
+                {'transaction_id': query_code},
+                {'$set': {
+                    'payment_status': 'failed',
+                    'error_message': 'Payment request timed out',
+                    'mpesa_query_response': result
+                }}
+            )
+
+        return jsonify(result)
 
     except requests.exceptions.RequestException as e:
         logging.error(f"Request failed: {str(e)}")
