@@ -3,7 +3,9 @@
 A modern property management system built with Flask, MongoDB, and Tailwind CSS.
 
 ## Live Demo
-Access the live application at: https://residencehub.onrender.com
+Access the live application at: 
+- Render: https://residencehub.onrender.com
+- Vercel: https://residencehub.vercel.app
 
 Default test credentials:
 - Manager Login:
@@ -73,21 +75,46 @@ flask run
 
 ## Deployment
 
-### Automatic Deployment with GitHub Actions
+### Vercel Deployment
 
-This project is configured for automatic deployment to Render using GitHub Actions.
+1. Install Vercel CLI:
+```bash
+npm install -g vercel
+```
 
-1. Fork this repository
+2. Login to Vercel:
+```bash
+vercel login
+```
 
-2. Set up the following secrets in your GitHub repository:
-   - `RENDER_API_KEY`: Your Render API key
-   - `RENDER_SERVICE_ID`: Your Render service ID
-   - `MONGODB_URI`: Your MongoDB connection string
-   - `SECRET_KEY`: Your application secret key
+3. Configure Environment Variables in Vercel:
+   - Go to your Vercel Dashboard
+   - Select your project
+   - Go to Settings > Environment Variables
+   - Add the following variables:
+     ```
+     FLASK_APP=app.py
+     FLASK_ENV=production
+     SECRET_KEY=your_secret_key
+     MONGODB_URI=your_mongodb_uri
+     MAIL_SERVER=smtp.gmail.com
+     MAIL_PORT=587
+     MAIL_USE_TLS=True
+     MAIL_USERNAME=your_email
+     MAIL_PASSWORD=your_email_password
+     ```
 
-3. Push to the main branch to trigger automatic deployment
+4. Deploy to Vercel:
+```bash
+vercel
+```
 
-### Manual Deployment to Render
+For automatic deployments:
+- Connect your GitHub repository to Vercel
+- Enable automatic deployments
+- Push to main branch to trigger deployment
+
+### Render Deployment
 
 1. Create a new Web Service on Render
 2. Connect your GitHub repository
