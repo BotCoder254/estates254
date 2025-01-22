@@ -25,4 +25,14 @@ services:
     healthCheckPath: /
     numInstances: 1
     buildCommand: docker build -t residencehub .
-    startCommand: docker run -p 8080:8080 residencehub 
+    startCommand: docker run -p 8080:8080 residencehub
+    startupTimeout: 120
+    autoDeploy: true
+    scaling:
+      minInstances: 1
+      maxInstances: 1
+      targetMemoryPercent: 80
+    healthCheck:
+      httpPath: /
+      port: 8080
+      initialDelay: 30 
