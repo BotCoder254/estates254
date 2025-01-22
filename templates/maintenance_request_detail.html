@@ -252,18 +252,27 @@
 {% if current_user.is_manager() %}
 <script>
 document.getElementById('status').addEventListener('change', function(e) {
-    fetch('{{ url_for("update_maintenance_status", request_id=request._id) }}', {
+    fetch('{{ url_for("update_maintenance_status_api", request_id=request._id) }}', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/json'
         },
-        body: 'status=' + e.target.value
+        body: JSON.stringify({
+            status: e.target.value,
+            notes: document.getElementById('manager_notes').value
+        })
     })
     .then(response => response.json())
     .then(data => {
-        if (data.success) {
+        if (data.error) {
+            showError(data.error);
+        } else {
             location.reload();
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showError('An error occurred while updating the status');
     });
 });
 </script>

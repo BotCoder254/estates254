@@ -1,0 +1,83 @@
+{% extends "emails/base_email.html" %}
+
+{% block title %}Maintenance Request Update{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+    <p>Hello {{ tenant_name }},</p>
+    
+    <div class="alert {% if request_status == 'completed' %}alert-success{% elif request_status == 'in_progress' %}alert-info{% else %}alert-warning{% endif %}">
+        <p style="margin: 0;">
+            <strong>
+                {% if request_status == 'completed' %}
+                    Your maintenance request has been completed
+                {% elif request_status == 'in_progress' %}
+                    Your maintenance request is now in progress
+                {% else %}
+                    Update on your maintenance request
+                {% endif %}
+            </strong>
+        </p>
+    </div>
+    
+    <div style="margin-top: 1.5rem;">
+        <h2 style="color: #111827; font-size: 1.25rem; font-weight: 500; margin-bottom: 1rem;">Request Details</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 0.5rem 0; color: #6b7280;">Request Type</td>
+                <td style="padding: 0.5rem 0; text-align: right; font-weight: 500;">{{ request_type }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 0.5rem 0; color: #6b7280;">Status</td>
+                <td style="padding: 0.5rem 0; text-align: right;">
+                    <span style="
+                        padding: 0.25rem 0.75rem;
+                        border-radius: 9999px;
+                        font-size: 0.875rem;
+                        font-weight: 500;
+                        {% if request_status == 'completed' %}
+                            background-color: #f0fdf4;
+                            color: #166534;
+                        {% elif request_status == 'in_progress' %}
+                            background-color: #eff6ff;
+                            color: #1e40af;
+                        {% else %}
+                            background-color: #fffbeb;
+                            color: #92400e;
+                        {% endif %}
+                    ">
+                        {{ request_status|title }}
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 0.5rem 0; color: #6b7280;">Submitted On</td>
+                <td style="padding: 0.5rem 0; text-align: right; font-weight: 500;">{{ submitted_date }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 0.5rem 0; color: #6b7280;">Last Updated</td>
+                <td style="padding: 0.5rem 0; text-align: right; font-weight: 500;">{{ last_updated }}</td>
+            </tr>
+        </table>
+    </div>
+    
+    {% if technician_notes %}
+    <div style="margin-top: 1.5rem;">
+        <h2 style="color: #111827; font-size: 1.25rem; font-weight: 500; margin-bottom: 1rem;">Technician Notes</h2>
+        <div style="background-color: #f9fafb; border-radius: 0.5rem; padding: 1.5rem;">
+            {{ technician_notes|safe }}
+        </div>
+    </div>
+    {% endif %}
+    
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{{ request_url }}" class="button">
+            View Request Details
+        </a>
+    </div>
+    
+    <div style="margin-top: 1.5rem;">
+        <p>If you have any questions about this maintenance request, please don't hesitate to contact us.</p>
+    </div>
+</div>
+{% endblock %} 

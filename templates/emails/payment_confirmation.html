@@ -1,0 +1,63 @@
+{% extends "emails/base_email.html" %}
+
+{% block title %}Payment Confirmation{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+    <p>Hello {{ tenant_name }},</p>
+    
+    <div class="alert alert-success">
+        <p style="margin: 0;">
+            <strong>Your payment of KES {{ amount_paid }} has been successfully processed.</strong>
+        </p>
+    </div>
+    
+    <div style="margin-top: 1.5rem;">
+        <h2 style="color: #111827; font-size: 1.25rem; font-weight: 500; margin-bottom: 1rem;">Payment Details</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 0.5rem 0; color: #6b7280;">Amount Paid</td>
+                <td style="padding: 0.5rem 0; text-align: right; font-weight: 500;">KES {{ amount_paid }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 0.5rem 0; color: #6b7280;">Transaction Date</td>
+                <td style="padding: 0.5rem 0; text-align: right; font-weight: 500;">{{ transaction_date }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 0.5rem 0; color: #6b7280;">Transaction ID</td>
+                <td style="padding: 0.5rem 0; text-align: right; font-weight: 500;">{{ transaction_id }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 0.5rem 0; color: #6b7280;">Payment Method</td>
+                <td style="padding: 0.5rem 0; text-align: right; font-weight: 500;">{{ payment_method }}</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div style="margin-top: 1.5rem;">
+        <h2 style="color: #111827; font-size: 1.25rem; font-weight: 500; margin-bottom: 1rem;">Property Details</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 0.5rem 0; color: #6b7280;">Property</td>
+                <td style="padding: 0.5rem 0; text-align: right; font-weight: 500;">{{ property_name }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 0.5rem 0; color: #6b7280;">Unit</td>
+                <td style="padding: 0.5rem 0; text-align: right; font-weight: 500;">{{ unit_number }}</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{{ receipt_url }}" class="button">
+            View Receipt
+        </a>
+    </div>
+    
+    <div style="margin-top: 1.5rem;">
+        <p>Thank you for your payment. Your receipt has been attached to this email for your records.</p>
+        
+        <p>If you have any questions about this payment, please don't hesitate to contact us.</p>
+    </div>
+</div>
+{% endblock %} 

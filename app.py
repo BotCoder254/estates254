@@ -17,11 +17,15 @@ import base64
 import requests
 import csv
 from io import StringIO
+from jinja2 import Environment, select_autoescape
 
 load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # MongoDB setup
 client = MongoClient(os.getenv('MONGODB_URI', 'mongodb://localhost:27017'))
@@ -54,6 +58,168 @@ app.config['PROFILE_PICTURES_FOLDER'] = PROFILE_PICTURES_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(DOCUMENTS_FOLDER, exist_ok=True)
 os.makedirs(PROFILE_PICTURES_FOLDER, exist_ok=True)
+
+# Configure Flask-Mail
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+mail = Mail(app)
+
+# Configure Jinja2 for email templates
+jinja_env = Environment(
+    autoescape=select_autoescape(['html', 'xml'])
+)
+
+def send_email_with_template(template_name, recipient_email, subject, **kwargs):
+    """Send an email using a template."""
+    try:
+        # Add common template variables
+        kwargs.update({
+            'current_year': datetime.utcnow().year,
+            'recipient_email': recipient_email
+        })
+        
+        # Render the email template
+        html = render_template(f'emails/{template_name}.html', **kwargs)
+        
+        # Create and send the email
+        msg = Message(
+            subject=subject,
+            recipients=[recipient_email],
+            html=html
+        )
+        mail.send(msg)
+        logging.info(f"Email sent successfully to {recipient_email}")
+        return True
+    except Exception as e:
+        logging.error(f"Error sending email: {str(e)}")
+        return False
+
+def send_payment_confirmation(payment_id):
+    """Send payment confirmation email."""
+    try:
+        payment = payments_collection.find_one({'_id': ObjectId(payment_id)})
+        if not payment:
+            return False
+        
+        tenant = users_collection.find_one({'_id': payment['tenant_id']})
+        if not tenant:
+            return False
+        
+        lease = lease_collection.find_one({'tenant_id': payment['tenant_id']})
+        if not lease:
+            return False
+        
+        return send_email_with_template(
+            'payment_confirmation',
+            tenant['email'],
+            'Payment Confirmation',
+            tenant_name=tenant['name'],
+            amount_paid=payment['amount_paid'],
+            transaction_date=payment['payment_date'].strftime('%B %d, %Y at %I:%M %p'),
+            transaction_id=payment.get('transaction_id', 'N/A'),
+            payment_method=payment['payment_method'].title(),
+            property_name='ResidenceHub',  # Replace with actual property name
+            unit_number=lease.get('unit_number', 'N/A'),
+            receipt_url=url_for('view_payment_detail', payment_id=str(payment['_id']), _external=True)
+        )
+    except Exception as e:
+        logging.error(f"Error sending payment confirmation: {str(e)}")
+        return False
+
+def send_payment_reminder(tenant_id, amount_due, due_date):
+    """Send payment reminder email."""
+    try:
+        tenant = users_collection.find_one({'_id': ObjectId(tenant_id)})
+        if not tenant:
+            return False
+        
+        lease = lease_collection.find_one({'tenant_id': ObjectId(tenant_id)})
+        if not lease:
+            return False
+        
+        days_until_due = (due_date - datetime.utcnow()).days
+        
+        return send_email_with_template(
+            'payment_reminder',
+            tenant['email'],
+            'Rent Payment Reminder',
+            tenant_name=tenant['name'],
+            amount_due=amount_due,
+            days_until_due=days_until_due,
+            due_date=due_date.strftime('%B %d, %Y'),
+            property_name='ResidenceHub',  # Replace with actual property name
+            unit_number=lease.get('unit_number', 'N/A'),
+            payment_url=url_for('view_payments', _external=True)
+        )
+    except Exception as e:
+        logging.error(f"Error sending payment reminder: {str(e)}")
+        return False
+
+def send_announcement_email(announcement_id, tenant_email):
+    """Send announcement email to a tenant."""
+    try:
+        announcement = announcements_collection.find_one({'_id': ObjectId(announcement_id)})
+        if not announcement:
+            return False
+        
+        tenant = users_collection.find_one({'email': tenant_email})
+        if not tenant:
+            return False
+        
+        posted_by = users_collection.find_one({'_id': announcement['created_by']})
+        
+        return send_email_with_template(
+            'announcement',
+            tenant_email,
+            f"New Announcement: {announcement['title']}",
+            tenant_name=tenant['name'],
+            announcement_title=announcement['title'],
+            announcement_content=announcement['content'],
+            announcement_priority=announcement.get('priority', 'normal'),
+            announcement_images=announcement.get('images', []),
+            posted_by=posted_by['name'] if posted_by else 'Management',
+            posted_date=announcement['created_at'].strftime('%B %d, %Y at %I:%M %p'),
+            announcement_url=url_for('view_announcements', _external=True)
+        )
+    except Exception as e:
+        logging.error(f"Error sending announcement email: {str(e)}")
+        return False
+
+def send_maintenance_update(request_id):
+    """Send maintenance request update email."""
+    try:
+        maintenance_request = maintenance_requests_collection.find_one({'_id': ObjectId(request_id)})
+        if not maintenance_request:
+            return False
+        
+        tenant = users_collection.find_one({'_id': maintenance_request['tenant_id']})
+        if not tenant:
+            return False
+        
+        return send_email_with_template(
+            'maintenance_update',
+            tenant['email'],
+            'Maintenance Request Update',
+            tenant_name=tenant['name'],
+            request_type=maintenance_request['type'],
+            request_status=maintenance_request['status'],
+            submitted_date=maintenance_request['created_at'].strftime('%B %d, %Y'),
+            last_updated=maintenance_request['updated_at'].strftime('%B %d, %Y at %I:%M %p'),
+            technician_notes=maintenance_request.get('technician_notes'),
+            request_url=url_for('maintenance_request_detail', request_id=str(maintenance_request['_id']), _external=True)
+        )
+    except Exception as e:
+        logging.error(f"Error sending maintenance update: {str(e)}")
+        return False
+
+# Login manager setup
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -215,19 +381,6 @@ scheduler.add_job(
     id='send_monthly_reminders',
     replace_existing=True
 )
-
-# Login manager setup
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-
-# Mail configuration
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-mail = Mail(app)
 
 class User(UserMixin):
     def __init__(self, user_data):
@@ -721,32 +874,15 @@ def manage_announcements():
             'created_by': ObjectId(current_user.id)
         }
         
-        announcements_collection.insert_one(announcement_data)
+        result = announcements_collection.insert_one(announcement_data)
+        announcement_id = str(result.inserted_id)
         
-        # Try to send email notifications, but don't fail if there's an error
-        if app.config['MAIL_USERNAME'] and app.config['MAIL_PASSWORD']:
-            try:
-                tenants = users_collection.find({'role': 'tenant'})
-                with mail.connect() as conn:
-                    for tenant in tenants:
-                        message = Message(
-                            subject=f"New Announcement: {announcement_data['title']}",
-                            sender=app.config['MAIL_USERNAME'],
-                            recipients=[tenant['email']]
-                        )
-                        message.body = f"""
-                        {announcement_data['title']}
-                        
-                        {announcement_data['content']}
-                        
-                        Posted on: {announcement_data['created_at'].strftime('%B %d, %Y')}
-                        """
-                        conn.send(message)
-            except Exception as e:
-                # Log the error but don't prevent announcement creation
-                print(f"Error sending email notifications: {str(e)}")
+        # Send email notifications to all tenants
+        tenants = users_collection.find({'role': 'tenant'})
+        for tenant in tenants:
+            send_announcement_email(announcement_id, tenant['email'])
         
-        flash('Announcement posted successfully')
+        flash('Announcement posted successfully', 'success')
         return redirect(url_for('manage_announcements'))
     
     announcements = list(announcements_collection.find().sort('created_at', -1))
@@ -1952,22 +2088,27 @@ def query():
 
         # Update payment status in database if successful
         if result.get('ResultCode') == '0':
-            payments_collection.update_one(
+            payment = payments_collection.find_one_and_update(
                 {'transaction_id': query_code},
                 {'$set': {
                     'payment_status': 'completed',
                     'completed_at': datetime.utcnow(),
                     'mpesa_query_response': result
-                }}
+                }},
+                return_document=True
             )
+            if payment:
+                # Send payment confirmation email
+                send_payment_confirmation(str(payment['_id']))
         elif result.get('ResultCode') == '1037':  # Timeout
-            payments_collection.update_one(
+            payment = payments_collection.find_one_and_update(
                 {'transaction_id': query_code},
                 {'$set': {
                     'payment_status': 'failed',
                     'error_message': 'Payment request timed out',
                     'mpesa_query_response': result
-                }}
+                }},
+                return_document=True
             )
 
         return jsonify(result)
@@ -1975,6 +2116,39 @@ def query():
     except requests.exceptions.RequestException as e:
         logging.error(f"Request failed: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/maintenance/update_status/<request_id>', methods=['POST'])
+@login_required
+@manager_required
+def update_maintenance_status_api(request_id):
+    """Update maintenance request status via API."""
+    if not request.json or 'status' not in request.json:
+        return jsonify({"error": "Missing status"}), 400
+    
+    new_status = request.json['status']
+    technician_notes = request.json.get('notes', '')
+    
+    # Update the maintenance request
+    maintenance_request = maintenance_requests_collection.find_one_and_update(
+        {'_id': ObjectId(request_id)},
+        {'$set': {
+            'status': new_status,
+            'technician_notes': technician_notes,
+            'updated_at': datetime.utcnow(),
+            'updated_by': ObjectId(current_user.id)
+        }},
+        return_document=True
+    )
+    
+    if maintenance_request:
+        # Send email notification about the status update
+        send_maintenance_update(request_id)
+        return jsonify({
+            "message": "Status updated successfully",
+            "status": new_status
+        })
+    
+    return jsonify({"error": "Maintenance request not found"}), 404
 
 if __name__ == '__main__':
     app.run(debug=True) 

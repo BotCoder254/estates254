@@ -5,4 +5,5 @@ flask-login==0.6.3
 bcrypt==4.1.2
 python-jose==3.3.0
 flask-wtf==1.2.1
-email-validator==2.1.0.post1 
+email-validator==2.1.0.post1
+flask-mail==0.10.0 
