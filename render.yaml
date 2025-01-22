@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: residencehub
+    env: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_APP
+        value: app.py
+      - key: SECRET_KEY
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: MAIL_SERVER
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_USE_TLS
+        sync: false
+    healthCheckPath: /
+    numInstances: 1
+    buildCommand: docker build -t residencehub .
+    startCommand: docker run -p 8080:8080 residencehub 

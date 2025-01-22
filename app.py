@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, abort, jsonify, send_from_directory, Response
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from pymongo import MongoClient
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import os
@@ -30,7 +31,18 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
 logging.basicConfig(level=logging.INFO)
 
 # MongoDB setup
-client = MongoClient(os.getenv('MONGODB_URI', 'mongodb://localhost:27017'))
+uri = "mongodb+srv://teumteum776:soulmind254@cluster0.wxgbm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+
+# Create a new client and connect to the server
+try:
+    client = MongoClient(uri, server_api=ServerApi('1'))
+    # Send a ping to confirm a successful connection
+    client.admin.command('ping')
+    print("Successfully connected to MongoDB!")
+except Exception as e:
+    print(f"Error connecting to MongoDB: {e}")
+    exit(1)
+
 db = client['residencehub']
 users_collection = db['users']
 apartments_collection = db['apartments']

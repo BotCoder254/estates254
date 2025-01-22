@@ -1,23 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{% block title %}{% endblock %} - ResidenceHub</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col">
+<body class="h-full bg-gray-50 flex flex-col">
     <!-- Navigation -->
     <nav class="bg-white shadow-lg border-b border-gray-100">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
+        <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+            <div class="flex justify-between h-14 sm:h-16">
                 <div class="flex">
                     <div class="flex-shrink-0 flex items-center">
                         <a href="{{ url_for('index') }}" class="flex items-center space-x-2">
-                            <i class="fas fa-building text-indigo-600 text-2xl"></i>
-                            <span class="text-2xl font-bold text-gray-900">ResidenceHub</span>
+                            <i class="fas fa-building text-indigo-600 text-xl sm:text-2xl"></i>
+                            <span class="text-xl sm:text-2xl font-bold text-gray-900">ResidenceHub</span>
                         </a>
                     </div>
                     {% if current_user.is_authenticated %}
@@ -73,7 +73,11 @@
                 </div>
                 <div class="flex items-center">
                     {% if current_user.is_authenticated %}
-                    <div class="ml-3 relative">
+                    <!-- Mobile menu button -->
+                    <button type="button" onclick="toggleMobileMenu()" class="sm:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <div class="hidden sm:flex ml-3 relative">
                         <div class="flex items-center space-x-4">
                             <div class="flex items-center space-x-2">
                                 <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden">
@@ -111,8 +115,18 @@
 
         <!-- Mobile Navigation -->
         {% if current_user.is_authenticated %}
-        <div class="sm:hidden border-t border-gray-200">
+        <div id="mobileMenu" class="sm:hidden border-t border-gray-200 hidden">
             <div class="pt-2 pb-3 space-y-1">
+                <!-- User Info for Mobile -->
+                <div class="px-4 py-2 flex items-center space-x-3 border-b border-gray-200 mb-2">
+                    <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden">
+                        <img src="{{ current_user.get_profile_picture_url() }}" alt="Profile picture" class="h-full w-full object-cover">
+                    </div>
+                    <div>
+                        <div class="text-base font-medium text-gray-800">{{ current_user.name }}</div>
+                        <div class="text-sm text-gray-500">{{ current_user.role|title }}</div>
+                    </div>
+                </div>
                 <a href="{{ url_for('dashboard') }}" 
                    class="flex items-center px-4 py-2 text-base font-medium {% if request.endpoint == 'dashboard' %}bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                     <i class="fas fa-chart-line w-6"></i>
@@ -159,54 +173,74 @@
                     My Profile
                 </a>
                 {% endif %}
+                <!-- Logout for Mobile -->
+                <a href="{{ url_for('logout') }}" 
+                   class="flex items-center px-4 py-2 text-base font-medium text-red-600 hover:bg-red-50">
+                    <i class="fas fa-sign-out-alt w-6"></i>
+                    Logout
+                </a>
             </div>
         </div>
         {% endif %}
     </nav>
 
     <!-- Main Content -->
-    <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {% with messages = get_flashed_messages() %}
-        {% if messages %}
-        <div class="mb-8">
-            {% for message in messages %}
-            <div class="flex items-center p-4 mb-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-md">
-                <div class="flex-shrink-0">
-                    <i class="fas fa-info-circle text-blue-400"></i>
+    <main class="flex-grow">
+        <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div class="mb-8">
+                {% for message in messages %}
+                <div class="flex items-center p-4 mb-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-md">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-info-circle text-blue-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-blue-700">{{ message }}</p>
+                    </div>
                 </div>
-                <div class="ml-3">
-                    <p class="text-sm text-blue-700">{{ message }}</p>
-                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
+            {% endif %}
+            {% endwith %}
+            
+            {% block content %}{% endblock %}
         </div>
-        {% endif %}
-        {% endwith %}
-        
-        {% block content %}{% endblock %}
     </main>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 mt-auto">
-        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center space-x-2 text-gray-500 text-sm">
+    <footer class="bg-white border-t border-gray-200">
+        <div class="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+                <div class="flex items-center space-x-2 text-gray-500 text-sm text-center sm:text-left">
                     <i class="fas fa-building"></i>
                     <span>© 2025 ResidenceHub. All rights reserved.</span>
                 </div>
                 <div class="flex space-x-6">
                     <a href="#" class="text-gray-400 hover:text-gray-500">
-                        <i class="fab fa-facebook text-xl"></i>
+                        <i class="fab fa-facebook text-lg sm:text-xl"></i>
                     </a>
                     <a href="#" class="text-gray-400 hover:text-gray-500">
-                        <i class="fab fa-twitter text-xl"></i>
+                        <i class="fab fa-twitter text-lg sm:text-xl"></i>
                     </a>
                     <a href="#" class="text-gray-400 hover:text-gray-500">
-                        <i class="fab fa-instagram text-xl"></i>
+                        <i class="fab fa-instagram text-lg sm:text-xl"></i>
                     </a>
                 </div>
             </div>
         </div>
     </footer>
+
+    <!-- Add JavaScript for mobile menu toggle -->
+    <script>
+        function toggleMobileMenu() {
+            const mobileMenu = document.getElementById('mobileMenu');
+            if (mobileMenu.classList.contains('hidden')) {
+                mobileMenu.classList.remove('hidden');
+            } else {
+                mobileMenu.classList.add('hidden');
+            }
+        }
+    </script>
 </body>
 </html> 
