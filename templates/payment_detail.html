@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Detail{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Payment Detail</h1>
+            <p class="mt-1 text-sm text-gray-600">View detailed payment information</p>
+        </div>
+        <div>
+            <a href="/manage/payments" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back to Payments
+            </a>
+            <button id="downloadDetail" class="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i class="fas fa-download mr-2"></i>
+                Download Details
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <!-- Payment Information -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Payment Information</h2>
+            <div class="space-y-4" id="paymentInfo">
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">Amount</span>
+                    <span class="text-sm text-gray-900" id="amount">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">Status</span>
+                    <span class="text-sm" id="status">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">Payment Date</span>
+                    <span class="text-sm text-gray-900" id="paymentDate">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">Transaction ID</span>
+                    <span class="text-sm text-gray-900" id="transactionId">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">Payment Method</span>
+                    <span class="text-sm text-gray-900" id="paymentMethod">Loading...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tenant Information -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Tenant Information</h2>
+            <div class="space-y-4" id="tenantInfo">
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">Name</span>
+                    <span class="text-sm text-gray-900" id="tenantName">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">Email</span>
+                    <span class="text-sm text-gray-900" id="tenantEmail">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">Phone</span>
+                    <span class="text-sm text-gray-900" id="tenantPhone">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">ID Number</span>
+                    <span class="text-sm text-gray-900" id="tenantId">Loading...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Apartment Information -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Apartment Information</h2>
+            <div class="space-y-4" id="apartmentInfo">
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">Apartment Number</span>
+                    <span class="text-sm text-gray-900" id="apartmentNumber">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">Floor</span>
+                    <span class="text-sm text-gray-900" id="floor">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">Monthly Rent</span>
+                    <span class="text-sm text-gray-900" id="monthlyRent">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">Lease Period</span>
+                    <span class="text-sm text-gray-900" id="leasePeriod">Loading...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Statistics -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Payment Statistics</h2>
+            <div class="space-y-4" id="paymentStats">
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">Total Paid</span>
+                    <span class="text-sm text-gray-900" id="totalPaid">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">Pending Amount</span>
+                    <span class="text-sm text-gray-900" id="pendingAmount">Loading...</span>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-200">
+                    <span class="text-sm font-medium text-gray-500">Total Transactions</span>
+                    <span class="text-sm text-gray-900" id="totalTransactions">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment History -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Payment History</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transaction ID</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="paymentHistory">
+                        <!-- Payment history will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const paymentId = '{{ payment_id }}';
+
+    function loadPaymentDetail() {
+        fetch(`/api/payments/detail/${paymentId}`)
+            .then(response => response.json())
+            .then(data => {
+                // Update Payment Information
+                document.getElementById('amount').textContent = `KES ${data.payment.amount_paid.toLocaleString()}`;
+                document.getElementById('status').innerHTML = `
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                        ${data.payment.payment_status === 'completed' ? 'bg-green-100 text-green-800' : 
+                        data.payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                        'bg-red-100 text-red-800'}">
+                        ${data.payment.payment_status}
+                    </span>
+                `;
+                document.getElementById('paymentDate').textContent = data.payment.payment_date;
+                document.getElementById('transactionId').textContent = data.payment.transaction_id || 'N/A';
+                document.getElementById('paymentMethod').textContent = data.payment.payment_method;
+
+                // Update Tenant Information
+                document.getElementById('tenantName').textContent = data.tenant.name;
+                document.getElementById('tenantEmail').textContent = data.tenant.email;
+                document.getElementById('tenantPhone').textContent = data.tenant.phone;
+                document.getElementById('tenantId').textContent = data.tenant.id_number;
+
+                // Update Apartment Information
+                document.getElementById('apartmentNumber').textContent = data.apartment.apartment_number;
+                document.getElementById('floor').textContent = data.apartment.floor;
+                document.getElementById('monthlyRent').textContent = `KES ${data.apartment.monthly_rent.toLocaleString()}`;
+                document.getElementById('leasePeriod').textContent = `${data.apartment.lease_start} to ${data.apartment.lease_end}`;
+
+                // Update Payment Statistics
+                document.getElementById('totalPaid').textContent = `KES ${data.payment_stats.total_paid.toLocaleString()}`;
+                document.getElementById('pendingAmount').textContent = `KES ${data.payment_stats.pending_amount.toLocaleString()}`;
+                document.getElementById('totalTransactions').textContent = data.payment_stats.total_transactions;
+
+                // Update Payment History
+                const historyTable = document.getElementById('paymentHistory');
+                historyTable.innerHTML = data.payment_history.map(payment => `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.payment_date}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">KES ${payment.amount_paid.toLocaleString()}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                ${payment.payment_status === 'completed' ? 'bg-green-100 text-green-800' : 
+                                payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                'bg-red-100 text-red-800'}">
+                                ${payment.payment_status}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.payment_method}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.transaction_id || 'N/A'}</td>
+                    </tr>
+                `).join('');
+            })
+            .catch(error => console.error('Error loading payment detail:', error));
+    }
+
+    // Download button handler
+    document.getElementById('downloadDetail').addEventListener('click', function() {
+        window.location.href = `/api/payments/download/${paymentId}`;
+    });
+
+    // Initial load
+    loadPaymentDetail();
+
+    // Refresh data every 30 seconds
+    setInterval(loadPaymentDetail, 30000);
+</script>
+{% endblock %} 

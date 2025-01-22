@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Payments{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">Payment Management</h1>
+        <p class="mt-2 text-sm text-gray-600">Track and manage tenant rent payments.</p>
+    </div>
+
+    <!-- Payment Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-500">
+                    <i class="fas fa-check-circle text-2xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-500">Total Payments</p>
+                    <h3 class="text-xl font-semibold" id="totalPayments">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-500">
+                    <i class="fas fa-clock text-2xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-500">Pending Payments</p>
+                    <h3 class="text-xl font-semibold" id="pendingPayments">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-red-100 text-red-500">
+                    <i class="fas fa-times-circle text-2xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-500">Failed Payments</p>
+                    <h3 class="text-xl font-semibold" id="failedPayments">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-500">
+                    <i class="fas fa-money-bill-wave text-2xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-500">Total Amount</p>
+                    <h3 class="text-xl font-semibold" id="totalAmount">KES 0</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment History -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Payment History</h2>
+                <button id="downloadReport" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-download mr-2"></i>
+                    Download Report
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tenant</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Apartment</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transaction ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="paymentHistory">
+                        <!-- Payment history will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Detail Modal -->
+<div id="paymentDetailModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold">Payment Details</h2>
+            <button onclick="closeDetailModal()" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="paymentDetailContent" class="space-y-6">
+            <!-- Payment details will be loaded here -->
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load payment statistics
+    function loadPaymentStats() {
+        fetch('/api/payments/stats')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('totalPayments').textContent = data.total_payments;
+                document.getElementById('pendingPayments').textContent = data.pending_payments;
+                document.getElementById('failedPayments').textContent = data.failed_payments;
+                document.getElementById('totalAmount').textContent = `KES ${data.total_amount.toLocaleString()}`;
+            })
+            .catch(error => console.error('Error loading payment stats:', error));
+    }
+
+    // Load payment history
+    function loadPaymentHistory() {
+        fetch('/api/payments/history')
+            .then(response => response.json())
+            .then(data => {
+                const historyTable = document.getElementById('paymentHistory');
+                historyTable.innerHTML = '';
+
+                data.payments.forEach(payment => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.payment_date}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">${payment.tenant_name}</div>
+                            <div class="text-sm text-gray-500">${payment.tenant_email}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">Apt ${payment.apartment_number}</div>
+                            <div class="text-sm text-gray-500">Floor ${payment.apartment_floor}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">KES ${payment.amount_paid.toLocaleString()}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                ${payment.payment_status === 'completed' ? 'bg-green-100 text-green-800' : 
+                                payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                'bg-red-100 text-red-800'}">
+                                ${payment.payment_status}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.payment_method}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.transaction_id}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="viewPaymentDetail('${payment._id}')" class="text-blue-600 hover:text-blue-900 mr-3">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                            <a href="/api/payments/download/${payment._id}" class="text-green-600 hover:text-green-900">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        </td>
+                    `;
+                    historyTable.appendChild(row);
+                });
+            })
+            .catch(error => console.error('Error loading payment history:', error));
+    }
+
+    // View payment detail
+    function viewPaymentDetail(paymentId) {
+        fetch(`/api/payments/detail/${paymentId}`)
+            .then(response => response.json())
+            .then(data => {
+                const modal = document.getElementById('paymentDetailModal');
+                const content = document.getElementById('paymentDetailContent');
+                
+                content.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Payment Information -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Payment Information</h3>
+                            <dl class="space-y-2">
+                                <div class="flex justify-between">
+                                    <dt class="text-sm font-medium text-gray-500">Amount:</dt>
+                                    <dd class="text-sm text-gray-900">KES ${data.payment.amount_paid.toLocaleString()}</dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-sm font-medium text-gray-500">Status:</dt>
+                                    <dd class="text-sm">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                            ${data.payment.payment_status === 'completed' ? 'bg-green-100 text-green-800' : 
+                                            data.payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                            'bg-red-100 text-red-800'}">
+                                            ${data.payment.payment_status}
+                                        </span>
+                                    </dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-sm font-medium text-gray-500">Payment Date:</dt>
+                                    <dd class="text-sm text-gray-900">${data.payment.payment_date}</dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-sm font-medium text-gray-500">Transaction ID:</dt>
+                                    <dd class="text-sm text-gray-900">${data.payment.transaction_id || 'N/A'}</dd>
+                                </div>
+                            </dl>
+                        </div>
+
+                        <!-- Tenant Information -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Tenant Information</h3>
+                            <dl class="space-y-2">
+                                <div class="flex justify-between">
+                                    <dt class="text-sm font-medium text-gray-500">Name:</dt>
+                                    <dd class="text-sm text-gray-900">${data.tenant.name}</dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-sm font-medium text-gray-500">Email:</dt>
+                                    <dd class="text-sm text-gray-900">${data.tenant.email}</dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-sm font-medium text-gray-500">Phone:</dt>
+                                    <dd class="text-sm text-gray-900">${data.tenant.phone}</dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-sm font-medium text-gray-500">ID Number:</dt>
+                                    <dd class="text-sm text-gray-900">${data.tenant.id_number}</dd>
+                                </div>
+                            </dl>
+                        </div>
+
+                        <!-- Apartment Information -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Apartment Information</h3>
+                            <dl class="space-y-2">
+                                <div class="flex justify-between">
+                                    <dt class="text-sm font-medium text-gray-500">Apartment Number:</dt>
+                                    <dd class="text-sm text-gray-900">${data.apartment.apartment_number}</dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-sm font-medium text-gray-500">Floor:</dt>
+                                    <dd class="text-sm text-gray-900">${data.apartment.floor}</dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-sm font-medium text-gray-500">Monthly Rent:</dt>
+                                    <dd class="text-sm text-gray-900">KES ${data.apartment.monthly_rent.toLocaleString()}</dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-sm font-medium text-gray-500">Lease Period:</dt>
+                                    <dd class="text-sm text-gray-900">${data.apartment.lease_start} to ${data.apartment.lease_end}</dd>
+                                </div>
+                            </dl>
+                        </div>
+
+                        <!-- Payment History -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Payment Statistics</h3>
+                            <dl class="space-y-2">
+                                <div class="flex justify-between">
+                                    <dt class="text-sm font-medium text-gray-500">Total Paid:</dt>
+                                    <dd class="text-sm text-gray-900">KES ${data.payment_stats.total_paid.toLocaleString()}</dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-sm font-medium text-gray-500">Pending Amount:</dt>
+                                    <dd class="text-sm text-gray-900">KES ${data.payment_stats.pending_amount.toLocaleString()}</dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-sm font-medium text-gray-500">Total Transactions:</dt>
+                                    <dd class="text-sm text-gray-900">${data.payment_stats.total_transactions}</dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <!-- Payment History Table -->
+                    <div class="mt-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Payment History</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transaction ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    ${data.payment_history.map(payment => `
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.payment_date}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">KES ${payment.amount_paid.toLocaleString()}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                                    ${payment.payment_status === 'completed' ? 'bg-green-100 text-green-800' : 
+                                                    payment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                                    'bg-red-100 text-red-800'}">
+                                                    ${payment.payment_status}
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.payment_method}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.transaction_id}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                
+                modal.classList.remove('hidden');
+            })
+            .catch(error => console.error('Error loading payment detail:', error));
+    }
+
+    function closeDetailModal() {
+        document.getElementById('paymentDetailModal').classList.add('hidden');
+    }
+
+    // Initial load
+    loadPaymentStats();
+    loadPaymentHistory();
+
+    // Refresh data every 30 seconds
+    setInterval(() => {
+        loadPaymentStats();
+        loadPaymentHistory();
+    }, 30000);
+
+    // Download report button
+    document.getElementById('downloadReport').addEventListener('click', function() {
+        const now = new Date();
+        const filename = `payment_report_${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}.csv`;
+        window.location.href = `/api/payments/download/all?filename=${filename}`;
+    });
+</script>
+{% endblock %} 

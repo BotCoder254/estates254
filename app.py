@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, abort, jsonify, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, flash, abort, jsonify, send_from_directory, Response
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from pymongo import MongoClient
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -12,6 +12,11 @@ from werkzeug.utils import secure_filename
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import time
+import logging
+import base64
+import requests
+import csv
+from io import StringIO
 
 load_dotenv()
 
@@ -28,7 +33,8 @@ lease_collection = db['leases']
 maintenance_requests_collection = db['maintenance_requests']
 announcements_collection = db['announcements']
 reminders_collection = db['reminders']
-documents_collection = db['documents']  # New collection for documents
+documents_collection = db['documents']
+payments_collection = db['payments']  # New collection for rent payments
 
 # Scheduler setup
 scheduler = BackgroundScheduler()
@@ -1499,6 +1505,557 @@ def update_profile():
     
     flash('Profile updated successfully')
     return redirect(url_for('tenant_profile'))
+
+# Payment Routes
+@app.route('/api/payments/history')
+@login_required
+def get_payment_history():
+    """Get payment history for the current user or all tenants for managers."""
+    if current_user.is_manager():
+        # Get all payments for managers (including pending and completed)
+        payments = list(payments_collection.find().sort('payment_date', -1))
+        # Add tenant details to each payment
+        for payment in payments:
+            tenant = users_collection.find_one({'_id': payment['tenant_id']})
+            if tenant:
+                payment['tenant_name'] = tenant['name']
+                payment['tenant_email'] = tenant['email']
+                # Get apartment details
+                lease = lease_collection.find_one({'tenant_id': payment['tenant_id']})
+                if lease:
+                    apartment = apartments_collection.find_one({'_id': lease['apartment_id']})
+                    if apartment:
+                        apartment_details = {
+                            'apartment_number': apartment['apartment_number'],
+                            'floor': apartment['floor'],
+                            'monthly_rent': apartment['monthly_rent'],
+                            'lease_start': lease['start_date'].strftime('%Y-%m-%d'),
+                            'lease_end': lease['end_date'].strftime('%Y-%m-%d'),
+                            'payment_status': lease['payment_status']
+                        }
+                        payment.update(apartment_details)
+            
+            # Check status of pending payments
+            if payment['payment_status'] == 'pending' and payment.get('transaction_id'):
+                try:
+                    # Query M-Pesa for status
+                    access_token = get_access_token()
+                    url = "https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query"
+                    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                    
+                    password_str = f"4121151{'68cb945afece7b529b4a0901b2d8b1bb3bd9daa19bfdb48c69bec8dde962a932'}{timestamp}"
+                    password = base64.b64encode(password_str.encode()).decode('utf-8')
+
+                    headers = {
+                        "Authorization": f"Bearer {access_token}",
+                        "Content-Type": "application/json"
+                    }
+
+                    payload = {
+                        "BusinessShortCode": "4121151",
+                        "Password": password,
+                        "Timestamp": timestamp,
+                        "CheckoutRequestID": payment['transaction_id']
+                    }
+
+                    response = requests.post(url, json=payload, headers=headers)
+                    response.raise_for_status()
+                    result = response.json()
+                    
+                    # Update payment status based on query result
+                    if result.get('ResultCode') == '0':
+                        payments_collection.update_one(
+                            {'_id': payment['_id']},
+                            {'$set': {
+                                'payment_status': 'completed',
+                                'completed_at': datetime.utcnow(),
+                                'mpesa_query_response': result
+                            }}
+                        )
+                        payment['payment_status'] = 'completed'
+                    elif result.get('ResultCode') == '1037':  # Timeout
+                        payments_collection.update_one(
+                            {'_id': payment['_id']},
+                            {'$set': {
+                                'payment_status': 'failed',
+                                'error_message': 'Payment request timed out',
+                                'mpesa_query_response': result
+                            }}
+                        )
+                        payment['payment_status'] = 'failed'
+                except Exception as e:
+                    logging.error(f"Error querying payment status: {str(e)}")
+    else:
+        # Get all payments for tenant (including pending and completed)
+        payments = list(payments_collection.find({
+            'tenant_id': ObjectId(current_user.id)
+        }).sort('payment_date', -1))
+        
+        # Check status of pending payments
+        for payment in payments:
+            if payment['payment_status'] == 'pending' and payment.get('transaction_id'):
+                try:
+                    # Query M-Pesa for status
+                    access_token = get_access_token()
+                    url = "https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query"
+                    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                    
+                    password_str = f"4121151{'68cb945afece7b529b4a0901b2d8b1bb3bd9daa19bfdb48c69bec8dde962a932'}{timestamp}"
+                    password = base64.b64encode(password_str.encode()).decode('utf-8')
+
+                    headers = {
+                        "Authorization": f"Bearer {access_token}",
+                        "Content-Type": "application/json"
+                    }
+
+                    payload = {
+                        "BusinessShortCode": "4121151",
+                        "Password": password,
+                        "Timestamp": timestamp,
+                        "CheckoutRequestID": payment['transaction_id']
+                    }
+
+                    response = requests.post(url, json=payload, headers=headers)
+                    response.raise_for_status()
+                    result = response.json()
+                    
+                    # Update payment status based on query result
+                    if result.get('ResultCode') == '0':
+                        payments_collection.update_one(
+                            {'_id': payment['_id']},
+                            {'$set': {
+                                'payment_status': 'completed',
+                                'completed_at': datetime.utcnow(),
+                                'mpesa_query_response': result
+                            }}
+                        )
+                        payment['payment_status'] = 'completed'
+                    elif result.get('ResultCode') == '1037':  # Timeout
+                        payments_collection.update_one(
+                            {'_id': payment['_id']},
+                            {'$set': {
+                                'payment_status': 'failed',
+                                'mpesa_callback': result
+                            }}
+                        )
+                        payment['payment_status'] = 'failed'
+                except Exception as e:
+                    logging.error(f"Error querying payment status: {str(e)}")
+    
+    # Format payments for JSON response
+    formatted_payments = []
+    for payment in payments:
+        formatted_payment = {
+            '_id': str(payment['_id']),
+            'amount_paid': payment['amount_paid'],
+            'payment_date': payment['payment_date'].strftime('%Y-%m-%d %H:%M:%S'),
+            'payment_status': payment['payment_status'],
+            'payment_method': payment['payment_method'],
+            'transaction_id': payment.get('transaction_id', ''),
+            'tenant_id': str(payment['tenant_id']),
+            'error_message': payment.get('error_message', '')
+        }
+        if current_user.is_manager():
+            formatted_payment.update({
+                'tenant_name': payment.get('tenant_name', 'Unknown'),
+                'tenant_email': payment.get('tenant_email', ''),
+                'apartment_number': payment.get('apartment_number', ''),
+                'apartment_floor': payment.get('apartment_floor', ''),
+                'monthly_rent': payment.get('monthly_rent', 0)
+            })
+        formatted_payments.append(formatted_payment)
+    
+    return jsonify({'payments': formatted_payments})
+
+@app.route('/api/payments/stats')
+@login_required
+def get_payment_stats():
+    """Get payment statistics."""
+    if current_user.is_manager():
+        # Get payment statistics for managers
+        total_payments = payments_collection.count_documents({'payment_status': 'completed'})
+        pending_payments = payments_collection.count_documents({'payment_status': 'pending'})
+        failed_payments = payments_collection.count_documents({'payment_status': 'failed'})
+        
+        # Calculate total amount collected
+        completed_payments = list(payments_collection.find({'payment_status': 'completed'}))
+        total_amount = sum(payment['amount_paid'] for payment in completed_payments)
+        
+        return jsonify({
+            'total_payments': total_payments,
+            'pending_payments': pending_payments,
+            'failed_payments': failed_payments,
+            'total_amount': total_amount
+        })
+    else:
+        # Get payment statistics for tenant
+        total_payments = payments_collection.count_documents({
+            'tenant_id': ObjectId(current_user.id),
+            'payment_status': 'completed'
+        })
+        pending_payments = payments_collection.count_documents({
+            'tenant_id': ObjectId(current_user.id),
+            'payment_status': 'pending'
+        })
+        failed_payments = payments_collection.count_documents({
+            'tenant_id': ObjectId(current_user.id),
+            'payment_status': 'failed'
+        })
+        
+        # Calculate total amount paid
+        completed_payments = list(payments_collection.find({
+            'tenant_id': ObjectId(current_user.id),
+            'payment_status': 'completed'
+        }))
+        total_amount = sum(payment['amount_paid'] for payment in completed_payments)
+        
+        return jsonify({
+            'total_payments': total_payments,
+            'pending_payments': pending_payments,
+            'failed_payments': failed_payments,
+            'total_amount': total_amount
+        })
+
+@app.route('/api/payments/detail/<payment_id>')
+@login_required
+def get_payment_detail(payment_id):
+    """Get detailed payment information."""
+    if not current_user.is_manager():
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    try:
+        payment = payments_collection.find_one({'_id': ObjectId(payment_id)})
+        if not payment:
+            return jsonify({'error': 'Payment not found'}), 404
+        
+        # Get tenant details
+        tenant = users_collection.find_one({'_id': payment['tenant_id']})
+        tenant_details = {
+            'name': tenant['name'] if tenant else 'Unknown',
+            'email': tenant['email'] if tenant else '',
+            'phone': tenant['phone'] if tenant else '',
+            'id_number': tenant.get('id_number', ''),
+            'emergency_contact': tenant.get('emergency_contact', {}),
+            'join_date': tenant.get('join_date', '').strftime('%Y-%m-%d') if tenant.get('join_date') else ''
+        }
+        
+        # Get apartment and lease details
+        lease = lease_collection.find_one({'tenant_id': payment['tenant_id']})
+        apartment_details = {}
+        if lease:
+            apartment = apartments_collection.find_one({'_id': lease['apartment_id']})
+            if apartment:
+                apartment_details = {
+                    'apartment_number': apartment['apartment_number'],
+                    'floor': apartment['floor'],
+                    'monthly_rent': apartment['monthly_rent'],
+                    'lease_start': lease['start_date'].strftime('%Y-%m-%d'),
+                    'lease_end': lease['end_date'].strftime('%Y-%m-%d'),
+                    'payment_status': lease['payment_status'],
+                    'deposit_amount': lease.get('deposit_amount', 0),
+                    'rent_due_day': lease.get('rent_due_day', 5)
+                }
+        
+        # Get tenant's payment history
+        payment_history = list(payments_collection.find({
+            'tenant_id': payment['tenant_id']
+        }).sort('payment_date', -1))
+        
+        formatted_history = []
+        for hist_payment in payment_history:
+            formatted_history.append({
+                '_id': str(hist_payment['_id']),
+                'amount_paid': hist_payment['amount_paid'],
+                'payment_date': hist_payment['payment_date'].strftime('%Y-%m-%d %H:%M:%S'),
+                'payment_status': hist_payment['payment_status'],
+                'payment_method': hist_payment['payment_method'],
+                'transaction_id': hist_payment.get('transaction_id', ''),
+                'created_at': hist_payment['created_at'].strftime('%Y-%m-%d %H:%M:%S'),
+                'completed_at': hist_payment.get('completed_at', '').strftime('%Y-%m-%d %H:%M:%S') if hist_payment.get('completed_at') else None,
+                'error_message': hist_payment.get('error_message', '')
+            })
+        
+        # Calculate payment statistics
+        total_paid = sum(p['amount_paid'] for p in payment_history if p['payment_status'] == 'completed')
+        pending_amount = sum(p['amount_paid'] for p in payment_history if p['payment_status'] == 'pending')
+        failed_amount = sum(p['amount_paid'] for p in payment_history if p['payment_status'] == 'failed')
+        
+        # Format current payment details
+        payment_details = {
+            '_id': str(payment['_id']),
+            'amount_paid': payment['amount_paid'],
+            'payment_date': payment['payment_date'].strftime('%Y-%m-%d %H:%M:%S'),
+            'payment_status': payment['payment_status'],
+            'payment_method': payment['payment_method'],
+            'transaction_id': payment.get('transaction_id', ''),
+            'created_at': payment['created_at'].strftime('%Y-%m-%d %H:%M:%S'),
+            'completed_at': payment.get('completed_at', '').strftime('%Y-%m-%d %H:%M:%S') if payment.get('completed_at') else None,
+            'mpesa_response': payment.get('mpesa_response', {}),
+            'mpesa_callback': payment.get('mpesa_callback', {}),
+            'error_message': payment.get('error_message', '')
+        }
+        
+        return jsonify({
+            'payment': payment_details,
+            'tenant': tenant_details,
+            'apartment': apartment_details,
+            'payment_history': formatted_history,
+            'payment_stats': {
+                'total_paid': total_paid,
+                'pending_amount': pending_amount,
+                'failed_amount': failed_amount,
+                'total_transactions': len(payment_history)
+            }
+        })
+        
+    except Exception as e:
+        logging.error(f"Error getting payment detail: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/payments/download/<payment_id>')
+@login_required
+def download_payment_detail(payment_id):
+    """Download payment details as CSV."""
+    if not current_user.is_manager():
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    try:
+        payment = payments_collection.find_one({'_id': ObjectId(payment_id)})
+        if not payment:
+            return jsonify({'error': 'Payment not found'}), 404
+        
+        # Get tenant details
+        tenant = users_collection.find_one({'_id': payment['tenant_id']})
+        
+        # Get apartment and lease details
+        lease = lease_collection.find_one({'tenant_id': payment['tenant_id']})
+        apartment = None
+        if lease:
+            apartment = apartments_collection.find_one({'_id': lease['apartment_id']})
+        
+        # Get payment history
+        payment_history = list(payments_collection.find({
+            'tenant_id': payment['tenant_id']
+        }).sort('payment_date', -1))
+        
+        # Create CSV content
+        csv_content = []
+        csv_content.append(['Payment Details Report'])
+        csv_content.append([])
+        
+        # Tenant Information
+        csv_content.append(['Tenant Information'])
+        csv_content.append(['Name', tenant['name'] if tenant else 'Unknown'])
+        csv_content.append(['Email', tenant['email'] if tenant else ''])
+        csv_content.append(['Phone', tenant['phone'] if tenant else ''])
+        csv_content.append(['ID Number', tenant.get('id_number', '')])
+        csv_content.append([])
+        
+        # Apartment Information
+        if apartment and lease:
+            csv_content.append(['Apartment Information'])
+            csv_content.append(['Apartment Number', apartment['apartment_number']])
+            csv_content.append(['Floor', apartment['floor']])
+            csv_content.append(['Monthly Rent', apartment['monthly_rent']])
+            csv_content.append(['Lease Start', lease['start_date'].strftime('%Y-%m-%d')])
+            csv_content.append(['Lease End', lease['end_date'].strftime('%Y-%m-%d')])
+            csv_content.append([])
+        
+        # Payment History
+        csv_content.append(['Payment History'])
+        csv_content.append(['Date', 'Amount', 'Status', 'Method', 'Transaction ID'])
+        for hist_payment in payment_history:
+            csv_content.append([
+                hist_payment['payment_date'].strftime('%Y-%m-%d %H:%M:%S'),
+                hist_payment['amount_paid'],
+                hist_payment['payment_status'],
+                hist_payment['payment_method'],
+                hist_payment.get('transaction_id', '')
+            ])
+        
+        # Create response
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerows(csv_content)
+        
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': f'attachment; filename=payment_details_{payment_id}.csv'
+            }
+        )
+        
+    except Exception as e:
+        logging.error(f"Error downloading payment detail: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/manage/payments')
+@login_required
+@manager_required
+def manage_payments():
+    """Render the payments management page for managers."""
+    return render_template('manage_payments.html')
+
+@app.route('/payments')
+@login_required
+def view_payments():
+    """Render the payments page for tenants."""
+    return render_template('payments.html')
+
+@app.route('/manage/payment/<payment_id>')
+@login_required
+def view_payment_detail(payment_id):
+    """Render payment detail page for managers."""
+    if not current_user.is_manager():
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('dashboard'))
+    return render_template('payment_detail.html', payment_id=payment_id)
+
+def get_access_token():
+    """Generate OAuth access token."""
+    consumer_key = "frmypHgIJYc7mQuUu5NBvnYc0kF1StP3"
+    consumer_secret = "UAeJAJLNUkV5MLpL"
+    url = "https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
+    
+    # Create auth string and encode to base64
+    auth_string = f"{consumer_key}:{consumer_secret}"
+    auth_bytes = auth_string.encode('ascii')
+    auth_b64 = base64.b64encode(auth_bytes).decode('ascii')
+    
+    headers = {
+        "Authorization": f"Basic {auth_b64}",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        logging.info(f"Access token response status: {response.status_code}")
+        logging.info(f"Access token response: {response.text}")
+        response.raise_for_status()
+        return response.json()['access_token']
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error getting access token: {str(e)}")
+        raise
+
+@app.route('/stkpush', methods=['POST'])
+def stk_push():
+    """STK push route."""
+    # Log received request
+    logging.info("Received request body: %s", request.json)
+    
+    # Validate required fields
+    if not request.json or 'phone' not in request.json or 'amount' not in request.json:
+        return jsonify({
+            "error": "Missing required fields. Please provide both 'phone' and 'amount'"
+        }), 400
+
+    try:
+        phone_number = str(request.json['phone']).strip()
+        amount = request.json['amount']
+
+        # Format phone number
+        phone_number = phone_number.replace('+', '').replace(' ', '')
+        phone_number = ''.join(filter(str.isdigit, phone_number))
+        if not phone_number.startswith('254'):
+            phone_number = '254' + phone_number.lstrip('0')
+
+        # Validate amount is a positive number
+        try:
+            amount = int(float(amount))
+            if amount <= 0:
+                return jsonify({"error": "Amount must be greater than 0"}), 400
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid amount provided"}), 400
+
+        access_token = get_access_token()
+        url = "https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        
+        password_str = f"4121151{'68cb945afece7b529b4a0901b2d8b1bb3bd9daa19bfdb48c69bec8dde962a932'}{timestamp}"
+        password = base64.b64encode(password_str.encode()).decode('utf-8')
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "BusinessShortCode": "4121151",
+            "Password": password,
+            "Timestamp": timestamp,
+            "TransactionType": "CustomerPayBillOnline",
+            "Amount": amount,
+            "PartyA": phone_number,
+            "PartyB": "4121151",
+            "PhoneNumber": phone_number,
+            "CallBackURL": "https://github.com/BotCoder254",
+            "AccountReference": "KIOTA",
+            "TransactionDesc": "Mpesa Daraja API stk push test"
+        }
+
+        logging.info(f"Sending STK push request to: {url}")
+        logging.info(f"Headers: {headers}")
+        logging.info(f"Payload: {payload}")
+        
+        response = requests.post(url, json=payload, headers=headers)
+        logging.info(f"STK push response status: {response.status_code}")
+        logging.info(f"STK push response: {response.text}")
+        
+        if response.status_code != 200:
+            return jsonify({"error": f"M-Pesa API returned status code {response.status_code}", "details": response.text}), 500
+            
+        response.raise_for_status()
+        return jsonify(response.json())
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Request failed: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        logging.error(f"Unexpected error: {str(e)}")
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+@app.route('/query', methods=['POST'])
+def query():
+    """Query transaction status."""
+    if not request.json or 'queryCode' not in request.json:
+        return jsonify({"error": "Missing queryCode"}), 400
+
+    query_code = request.json['queryCode']
+
+    try:
+        access_token = get_access_token()
+        url = "https://api.safaricom.co.ke/mpesa/stkpushquery/v1/query"
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        
+        password_str = f"4121151{'68cb945afece7b529b4a0901b2d8b1bb3bd9daa19bfdb48c69bec8dde962a932'}{timestamp}"
+        password = base64.b64encode(password_str.encode()).decode('utf-8')
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "BusinessShortCode": "4121151",
+            "Password": password,
+            "Timestamp": timestamp,
+            "CheckoutRequestID": query_code
+        }
+
+        logging.info(f"Sending query request to: {url}")
+        logging.info(f"Headers: {headers}")
+        logging.info(f"Payload: {payload}")
+        
+        response = requests.post(url, json=payload, headers=headers)
+        logging.info(f"Query response status: {response.status_code}")
+        logging.info(f"Query response: {response.text}")
+        response.raise_for_status()
+        return jsonify(response.json())
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Request failed: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True) 
