@@ -2,6 +2,17 @@
 
 A modern property management system built with Flask, MongoDB, and Tailwind CSS.
 
+## Live Demo
+Access the live application at: https://residencehub.onrender.com
+
+Default test credentials:
+- Manager Login:
+  - Email: manager@example.com
+  - Password: test123
+- Tenant Login:
+  - Email: tenant@example.com
+  - Password: test123
+
 ## Features
 
 - User Authentication (Tenants & Property Managers)

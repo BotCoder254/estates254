@@ -31,4 +31,4 @@ ENV FLASK_ENV=production
 EXPOSE 8080
 
 # Command to run the application with proper Gunicorn settings
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--threads", "2", "--timeout", "120", "--worker-class", "gthread", "--log-level", "debug", "app:app"] 
+CMD ["gunicorn", "--bind", "0.0.0.0:10000", "--workers", "2", "--threads", "2", "--timeout", "120", "--worker-class", "gthread", "--log-level", "debug", "app:app"] 
