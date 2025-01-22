@@ -3,208 +3,213 @@
 {% block title %}Maintenance Requests{% endblock %}
 
 {% block content %}
-<div class="bg-white shadow rounded-lg">
-    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <div>
-            <h2 class="text-2xl font-bold text-gray-800">Maintenance Requests</h2>
-            <p class="text-gray-600">
-                {% if current_user.is_manager() %}
-                Overview of all maintenance requests
-                {% else %}
-                Track your maintenance requests
-                {% endif %}
-            </p>
-        </div>
-        {% if current_user.is_tenant() %}
-        <a href="{{ url_for('submit_maintenance_request') }}" 
-           class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-            <i class="fas fa-plus mr-2"></i>New Request
-        </a>
-        {% endif %}
-    </div>
-    
-    <div class="p-6">
-        <!-- Filters -->
-        <div class="mb-6">
-            <div class="flex space-x-4">
-                <div class="flex-1">
-                    <label for="search" class="sr-only">Search</label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fas fa-search text-gray-400"></i>
-                        </div>
-                        <input type="text" id="search" name="search" 
-                               class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                               placeholder="Search requests...">
+<div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="md:grid md:grid-cols-3 md:gap-6">
+                <div class="md:col-span-1">
+                    <h3 class="text-lg font-medium leading-6 text-gray-900">Maintenance Requests</h3>
+                    <p class="mt-1 text-sm text-gray-500">
+                        {% if current_user.is_manager %}
+                        Overview of all maintenance requests
+                        {% else %}
+                        Track your maintenance requests
+                        {% endif %}
+                    </p>
+                    {% if current_user.is_tenant %}
+                    <div class="mt-4">
+                        <a href="{{ url_for('submit_maintenance_request') }}" 
+                           class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <i class="fas fa-plus mr-2"></i>
+                            New Request
+                        </a>
                     </div>
+                    {% endif %}
                 </div>
-                <div class="flex-shrink-0">
-                    <select id="status-filter" name="status"
-                            class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                        <option value="all">All Status</option>
-                        <option value="pending">Pending</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
+                <div class="mt-5 md:mt-0 md:col-span-2">
+                    <!-- Filters -->
+                    <div class="mb-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="search" class="block text-sm font-medium text-gray-700">Search</label>
+                                <div class="mt-1 relative rounded-md shadow-sm">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-search text-gray-400"></i>
+                                    </div>
+                                    <input type="text" id="search" name="search" 
+                                           class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                           placeholder="Search requests...">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="status-filter" class="block text-sm font-medium text-gray-700">Status</label>
+                                <select id="status-filter" name="status"
+                                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                    <option value="all">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            {% if current_user.is_manager %}
+                            <div>
+                                <label for="priority-filter" class="block text-sm font-medium text-gray-700">Priority</label>
+                                <select id="priority-filter" name="priority"
+                                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                    <option value="all">All Priorities</option>
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="emergency">Emergency</option>
+                                </select>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Requests List -->
+                    <div class="mt-6 overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-300">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request ID</th>
+                                    {% if current_user.is_manager %}
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tenant</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                                    {% endif %}
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for request in requests %}
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#{{ request._id }}</td>
+                                    {% if current_user.is_manager %}
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-medium text-gray-900">{{ request.tenant_name }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900">Unit #{{ request.apartment_number }}</div>
+                                    </td>
+                                    {% endif %}
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ request.category|title }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        {% if request.priority == 'emergency' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Emergency</span>
+                                        {% elif request.priority == 'high' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">High</span>
+                                        {% elif request.priority == 'medium' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Medium</span>
+                                        {% else %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Low</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        {% if request.status == 'pending' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>
+                                        {% elif request.status == 'in_progress' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">In Progress</span>
+                                        {% elif request.status == 'completed' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Completed</span>
+                                        {% else %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Cancelled</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900">{{ request.created_at.strftime('%Y-%m-%d') }}</div>
+                                        <div class="text-sm text-gray-500">{{ request.created_at.strftime('%H:%M') }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <a href="{{ url_for('maintenance_request_detail', request_id=request._id) }}" 
+                                           class="text-indigo-600 hover:text-indigo-900">View Details</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if not requests %}
+                    <div class="text-center py-12">
+                        <i class="fas fa-clipboard-list text-gray-400 text-5xl mb-4"></i>
+                        <p class="text-gray-500 text-lg">No maintenance requests found</p>
+                        {% if current_user.is_tenant %}
+                        <a href="{{ url_for('submit_maintenance_request') }}" 
+                           class="mt-4 inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Submit New Request
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
-                {% if current_user.is_manager() %}
-                <div class="flex-shrink-0">
-                    <select id="priority-filter" name="priority"
-                            class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                        <option value="all">All Priorities</option>
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                        <option value="emergency">Emergency</option>
-                    </select>
-                </div>
-                {% endif %}
             </div>
         </div>
-
-        <!-- Requests List -->
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request ID</th>
-                        {% if current_user.is_manager() %}
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tenant</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                        {% endif %}
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    {% for request in requests %}
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">#{{ request._id }}</div>
-                        </td>
-                        {% if current_user.is_manager() %}
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">{{ request.tenant_name }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">Unit #{{ request.apartment_number }}</div>
-                        </td>
-                        {% endif %}
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{{ request.category|title }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            {% if request.priority == 'emergency' %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                Emergency
-                            </span>
-                            {% elif request.priority == 'high' %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
-                                High
-                            </span>
-                            {% elif request.priority == 'medium' %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                Medium
-                            </span>
-                            {% else %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                Low
-                            </span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            {% if request.status == 'pending' %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                Pending
-                            </span>
-                            {% elif request.status == 'in_progress' %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                In Progress
-                            </span>
-                            {% elif request.status == 'completed' %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                Completed
-                            </span>
-                            {% else %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                Cancelled
-                            </span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{{ request.created_at.strftime('%Y-%m-%d') }}</div>
-                            <div class="text-sm text-gray-500">{{ request.created_at.strftime('%H:%M') }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <a href="{{ url_for('maintenance_request_detail', request_id=request._id) }}" 
-                               class="text-indigo-600 hover:text-indigo-900">
-                                View Details
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        {% if not requests %}
-        <div class="text-center py-12">
-            <i class="fas fa-clipboard-list text-gray-400 text-5xl mb-4"></i>
-            <p class="text-gray-500 text-lg">No maintenance requests found</p>
-            {% if current_user.is_tenant() %}
-            <a href="{{ url_for('submit_maintenance_request') }}" 
-               class="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                Submit New Request
-            </a>
-            {% endif %}
-        </div>
-        {% endif %}
     </div>
 </div>
 
+{% if current_user.is_manager %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('search');
     const statusFilter = document.getElementById('status-filter');
-    {% if current_user.is_manager() %}
     const priorityFilter = document.getElementById('priority-filter');
-    {% endif %}
 
     if (searchInput) searchInput.addEventListener('input', filterRequests);
     if (statusFilter) statusFilter.addEventListener('change', filterRequests);
-    {% if current_user.is_manager() %}
     if (priorityFilter) priorityFilter.addEventListener('change', filterRequests);
-    {% endif %}
 
     function filterRequests() {
         const rows = document.querySelectorAll('tbody tr');
         const searchTerm = searchInput.value.toLowerCase();
         const statusValue = statusFilter.value;
-        {% if current_user.is_manager() %}
         const priorityValue = priorityFilter.value;
-        {% endif %}
 
         rows.forEach(row => {
             let show = true;
             const textContent = row.textContent.toLowerCase();
             const status = row.querySelector('[data-status]')?.dataset.status;
-            {% if current_user.is_manager() %}
             const priority = row.querySelector('[data-priority]')?.dataset.priority;
-            {% endif %}
 
             if (searchTerm && !textContent.includes(searchTerm)) show = false;
             if (statusValue !== 'all' && status !== statusValue) show = false;
-            {% if current_user.is_manager() %}
             if (priorityValue !== 'all' && priority !== priorityValue) show = false;
-            {% endif %}
 
             row.style.display = show ? '' : 'none';
         });
     }
 });
 </script>
+{% else %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('search');
+    const statusFilter = document.getElementById('status-filter');
+
+    if (searchInput) searchInput.addEventListener('input', filterRequests);
+    if (statusFilter) statusFilter.addEventListener('change', filterRequests);
+
+    function filterRequests() {
+        const rows = document.querySelectorAll('tbody tr');
+        const searchTerm = searchInput.value.toLowerCase();
+        const statusValue = statusFilter.value;
+
+        rows.forEach(row => {
+            let show = true;
+            const textContent = row.textContent.toLowerCase();
+            const status = row.querySelector('[data-status]')?.dataset.status;
+
+            if (searchTerm && !textContent.includes(searchTerm)) show = false;
+            if (statusValue !== 'all' && status !== statusValue) show = false;
+
+            row.style.display = show ? '' : 'none';
+        });
+    }
+});
+</script>
+{% endif %}
 {% endblock %} 

@@ -27,7 +27,7 @@
                             <i class="fas fa-chart-line mr-2"></i>
                             Dashboard
                         </a>
-                        {% if current_user.is_manager() %}
+                        {% if current_user.is_manager %}
                         <a href="{{ url_for('manage_apartments') }}" 
                            class="inline-flex items-center px-1 pt-1 border-b-2 {% if request.endpoint == 'manage_apartments' %}border-indigo-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} text-sm font-medium">
                             <i class="fas fa-building mr-2"></i>
@@ -48,20 +48,15 @@
                             <i class="fas fa-bullhorn mr-2"></i>
                             Announcements
                         </a>
-                        {% if current_user.is_manager() %}
-                        <a href="{{ url_for('manage_payments') }}" 
-                           class="inline-flex items-center px-1 pt-1 border-b-2 {% if request.endpoint == 'manage_payments' %}border-indigo-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} text-sm font-medium">
-                            <i class="fas fa-money-check-alt mr-2"></i>
-                            Payments
-                        </a>
                         {% endif %}
-                        {% endif %}
-                        <a href="{{ url_for('view_maintenance_requests') }}" 
-                           class="inline-flex items-center px-1 pt-1 border-b-2 {% if request.endpoint == 'view_maintenance_requests' %}border-indigo-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} text-sm font-medium">
+                        {% if current_user.is_tenant %}
+                        <a href="{{ url_for('tenant_maintenance') }}" 
+                           class="inline-flex items-center px-1 pt-1 border-b-2 {% if request.endpoint == 'tenant_maintenance' %}border-indigo-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} text-sm font-medium">
                             <i class="fas fa-tools mr-2"></i>
                             Maintenance
                         </a>
-                        {% if current_user.is_tenant() %}
+                        {% endif %}
+                        {% if current_user.is_tenant %}
                         <a href="{{ url_for('view_payments') }}" 
                            class="inline-flex items-center px-1 pt-1 border-b-2 {% if request.endpoint == 'view_payments' %}border-indigo-500 text-gray-900{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{% endif %} text-sm font-medium">
                             <i class="fas fa-money-check-alt mr-2"></i>
@@ -123,7 +118,7 @@
                     <i class="fas fa-chart-line w-6"></i>
                     Dashboard
                 </a>
-                {% if current_user.is_manager() %}
+                {% if current_user.is_manager %}
                 <a href="{{ url_for('manage_apartments') }}" 
                    class="flex items-center px-4 py-2 text-base font-medium {% if request.endpoint == 'manage_apartments' %}bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                     <i class="fas fa-building w-6"></i>
@@ -144,20 +139,15 @@
                     <i class="fas fa-bullhorn w-6"></i>
                     Announcements
                 </a>
-                {% if current_user.is_manager() %}
-                <a href="{{ url_for('manage_payments') }}" 
-                   class="flex items-center px-4 py-2 text-base font-medium {% if request.endpoint == 'manage_payments' %}bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
-                    <i class="fas fa-money-check-alt w-6"></i>
-                    Payments
-                </a>
                 {% endif %}
-                {% endif %}
-                <a href="{{ url_for('view_maintenance_requests') }}" 
-                   class="flex items-center px-4 py-2 text-base font-medium {% if request.endpoint == 'view_maintenance_requests' %}bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                {% if current_user.is_tenant %}
+                <a href="{{ url_for('tenant_maintenance') }}" 
+                   class="flex items-center px-4 py-2 text-base font-medium {% if request.endpoint == 'tenant_maintenance' %}bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                     <i class="fas fa-tools w-6"></i>
                     Maintenance
                 </a>
-                {% if current_user.is_tenant() %}
+                {% endif %}
+                {% if current_user.is_tenant %}
                 <a href="{{ url_for('view_payments') }}" 
                    class="flex items-center px-4 py-2 text-base font-medium {% if request.endpoint == 'view_payments' %}bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
                     <i class="fas fa-money-check-alt w-6"></i>
@@ -202,7 +192,7 @@
             <div class="flex justify-between items-center">
                 <div class="flex items-center space-x-2 text-gray-500 text-sm">
                     <i class="fas fa-building"></i>
-                    <span>© 2024 ResidenceHub. All rights reserved.</span>
+                    <span>© 2025 ResidenceHub. All rights reserved.</span>
                 </div>
                 <div class="flex space-x-6">
                     <a href="#" class="text-gray-400 hover:text-gray-500">

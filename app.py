@@ -18,6 +18,8 @@ import requests
 import csv
 from io import StringIO
 from jinja2 import Environment, select_autoescape
+from itsdangerous import URLSafeTimedSerializer
+import jwt
 
 load_dotenv()
 
@@ -382,59 +384,94 @@ scheduler.add_job(
     replace_existing=True
 )
 
+# Password reset token setup
+def get_reset_token(user_id):
+    """Generate a password reset token."""
+    try:
+        payload = {
+            'user_id': str(user_id),
+            'exp': datetime.utcnow() + timedelta(hours=1)
+        }
+        token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
+        return token
+    except Exception as e:
+        logging.error(f"Error generating reset token: {str(e)}")
+        return None
+
+def verify_reset_token(token):
+    """Verify the password reset token."""
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        user_id = payload.get('user_id')
+        if user_id:
+            return ObjectId(user_id)
+        return None
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+    except Exception as e:
+        logging.error(f"Error verifying reset token: {str(e)}")
+        return None
+
+# User class and login manager setup
 class User(UserMixin):
     def __init__(self, user_data):
-        self.id = str(user_data['_id'])
-        self.name = user_data.get('name', '')
-        self.email = user_data.get('email', '')
-        self.role = user_data.get('role', '')
-        self.apartment_id = user_data.get('apartment_id', None)
-        self.status = user_data.get('status', 'active')
-        self.profile_picture = user_data.get('profile_picture', None)
-
+        self.user_data = user_data
+        
+    def get_id(self):
+        return str(self.user_data['_id'])
+    
+    @property
+    def id(self):
+        return str(self.user_data['_id'])
+    
+    @property
+    def name(self):
+        return self.user_data.get('name', '')
+    
+    @property
+    def email(self):
+        return self.user_data.get('email', '')
+    
+    @property
+    def role(self):
+        return self.user_data.get('role', '')
+    
+    @property
     def is_manager(self):
         return self.role == 'manager'
-
+    
+    @property
     def is_tenant(self):
         return self.role == 'tenant'
-
-    def get_apartment(self):
-        if not self.apartment_id:
-            return None
-        return apartments_collection.find_one({'_id': ObjectId(self.apartment_id)})
-
-    def get_profile(self):
-        return profiles_collection.find_one({'user_id': ObjectId(self.id)})
-
-    def get_lease(self):
-        if not self.apartment_id:
-            return None
-        return leases_collection.find_one({
-            'tenant_id': ObjectId(self.id),
-            'apartment_id': ObjectId(self.apartment_id)
-        })
-
-    @property
-    def is_active(self):
-        return self.status == 'active'
-
-    @property
-    def is_authenticated(self):
-        return True
-
-    @property
-    def is_anonymous(self):
-        return False
-
+    
     def get_profile_picture_url(self):
-        if not self.profile_picture:
-            return url_for('static', filename='img/default-avatar.png')
-        return url_for('static', filename=f'uploads/profile_pictures/{self.profile_picture}')
+        profile = tenant_profiles_collection.find_one({'user_id': ObjectId(self.id)})
+        if profile and profile.get('profile_picture'):
+            return url_for('static', filename=f"uploads/profiles/{profile['profile_picture']}")
+        return url_for('static', filename='images/default-profile.png')
+    
+    def get_apartment(self):
+        lease = lease_collection.find_one({'tenant_id': ObjectId(self.id)})
+        if lease:
+            return apartments_collection.find_one({'_id': lease['apartment_id']})
+        return None
+    
+    def get_lease(self):
+        return lease_collection.find_one({'tenant_id': ObjectId(self.id)})
+
+@login_manager.user_loader
+def load_user(user_id):
+    user_data = users_collection.find_one({'_id': ObjectId(user_id)})
+    if user_data:
+        return User(user_data)
+    return None
 
 def manager_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_manager():
+        if not current_user.is_authenticated or not current_user.is_manager:
             abort(403)
         return f(*args, **kwargs)
     return decorated_function
@@ -442,15 +479,10 @@ def manager_required(f):
 def tenant_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_tenant():
+        if not current_user.is_authenticated or not current_user.is_tenant:
             abort(403)
         return f(*args, **kwargs)
     return decorated_function
-
-@login_manager.user_loader
-def load_user(user_id):
-    user_data = users_collection.find_one({'_id': ObjectId(user_id)})
-    return User(user_data) if user_data else None
 
 @app.route('/')
 def index():
@@ -513,7 +545,7 @@ def register():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    if current_user.is_manager():
+    if current_user.is_manager:
         # Get all apartments and tenants for managers
         apartments = list(apartments_collection.find())
         tenants = list(users_collection.find({'role': 'tenant'}))
@@ -554,15 +586,19 @@ def manage_tenants():
 @app.route('/tenant/maintenance')
 @login_required
 @tenant_required
-def maintenance_requests():
-    return render_template('maintenance_requests.html')
+def tenant_maintenance():
+    """Display tenant's maintenance requests."""
+    maintenance_requests = maintenance_requests_collection.find({
+        'tenant_id': ObjectId(current_user.id)
+    }).sort('created_at', -1)
+    return render_template('maintenance_requests.html', maintenance_requests=maintenance_requests)
 
 @app.route('/tenant/profile', methods=['GET', 'POST'])
 @login_required
 def tenant_profile():
     profile = tenant_profiles_collection.find_one({'user_id': ObjectId(current_user.id)})
     if request.method == 'POST':
-        if current_user.is_tenant():
+        if current_user.is_tenant:  # Changed from is_tenant() to is_tenant
             # Update tenant's own profile
             profile_data = {
                 'phone': request.form.get('phone'),
@@ -1572,36 +1608,16 @@ def get_tenant_data(tenant_id):
     
     return jsonify(tenant_data)
 
-@app.route('/api/profile', methods=['GET'])
+@app.route('/api/profile')
 @login_required
 def get_profile_data():
-    profile = tenant_profiles_collection.find_one({'user_id': ObjectId(current_user.id)})
-    apartment = current_user.get_apartment()
-    lease = current_user.get_lease()
-    
-    response = {
+    """Get user profile data."""
+    return jsonify({
         'name': current_user.name,
         'email': current_user.email,
-        'phone': profile.get('phone') if profile else None,
-        'emergency_contact': profile.get('emergency_contact') if profile else None,
-        'emergency_phone': profile.get('emergency_phone') if profile else None,
-        'profile_picture': current_user.profile_picture
-    }
-    
-    if apartment:
-        response['apartment'] = {
-            'unit_number': apartment.get('unit_number'),
-            'floor': apartment.get('floor')
-        }
-        
-    if lease:
-        response['lease'] = {
-            'start_date': lease.get('start_date'),
-            'end_date': lease.get('end_date'),
-            'rent_amount': lease.get('rent_amount')
-        }
-    
-    return jsonify(response)
+        'role': current_user.role,
+        'profile_picture': getattr(current_user, 'profile_picture', None)
+    })
 
 @app.route('/tenant/profile', methods=['POST'])
 @login_required
@@ -2149,6 +2165,74 @@ def update_maintenance_status_api(request_id):
         })
     
     return jsonify({"error": "Maintenance request not found"}), 404
+
+@app.route('/reset_password_request', methods=['GET', 'POST'])
+def reset_password_request():
+    """Handle password reset request."""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        email = request.form.get('email')
+        user = users_collection.find_one({'email': email})
+        
+        if user:
+            token = get_reset_token(user['_id'])
+            if token:
+                reset_url = url_for('reset_password', token=token, _external=True)
+                
+                # Send password reset email
+                send_email_with_template(
+                    'reset_password',
+                    email,
+                    'Password Reset Request',
+                    reset_url=reset_url,
+                    ip_address=request.remote_addr
+                )
+                
+                flash('Check your email for instructions to reset your password.', 'info')
+                return redirect(url_for('login'))
+        
+        # Always show this message even if email not found (security best practice)
+        flash('Check your email for instructions to reset your password.', 'info')
+        return redirect(url_for('login'))
+    
+    return render_template('reset_password_request.html')
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    """Handle password reset."""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    user_id = verify_reset_token(token)
+    if not user_id:
+        flash('Invalid or expired reset link.', 'error')
+        return redirect(url_for('reset_password_request'))
+    
+    if request.method == 'POST':
+        password = request.form.get('password')
+        password2 = request.form.get('password2')
+        
+        if not password or not password2:
+            flash('Please fill in all fields.', 'error')
+            return render_template('reset_password.html')
+        
+        if password != password2:
+            flash('Passwords do not match.', 'error')
+            return render_template('reset_password.html')
+        
+        # Update password
+        hashed_password = generate_password_hash(password)
+        users_collection.update_one(
+            {'_id': user_id},
+            {'$set': {'password': hashed_password}}
+        )
+        
+        flash('Your password has been reset. You can now log in.', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('reset_password.html')
 
 if __name__ == '__main__':
     app.run(debug=True) 

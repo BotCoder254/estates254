@@ -10,7 +10,7 @@
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">Welcome back, {{ current_user.name }}!</h1>
                 <p class="mt-1 text-gray-600">
-                    {% if current_user.is_manager() %}
+                    {% if current_user.is_manager %}
                     Manage your property and monitor key metrics
                     {% else %}
                     Stay updated with your residence information
@@ -23,155 +23,62 @@
         </div>
     </div>
 
-    {% if current_user.is_manager() %}
+    {% if current_user.is_manager %}
     <!-- Manager Dashboard -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <!-- Total Units -->
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Stats Card -->
         <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-indigo-50 text-indigo-600">
-                    <i class="fas fa-building text-xl"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Total Units</p>
-                    <div class="flex items-baseline">
-                        <p class="text-2xl font-semibold text-gray-900">{{ apartments|length }}</p>
-                        <p class="ml-2 text-sm text-gray-500">units</p>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Quick Stats</h3>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-chart-bar text-indigo-600"></i>
                     </div>
                 </div>
-            </div>
-            <div class="mt-4">
-                <a href="{{ url_for('manage_apartments') }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
-                    View all units <i class="fas fa-arrow-right ml-1"></i>
-                </a>
-            </div>
-        </div>
-
-        <!-- Total Tenants -->
-        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-green-50 text-green-600">
-                    <i class="fas fa-users text-xl"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Total Tenants</p>
-                    <div class="flex items-baseline">
-                        <p class="text-2xl font-semibold text-gray-900">{{ tenants|length }}</p>
-                        <p class="ml-2 text-sm text-gray-500">tenants</p>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-4">
-                <a href="{{ url_for('manage_tenants') }}" class="text-sm font-medium text-green-600 hover:text-green-500">
-                    Manage tenants <i class="fas fa-arrow-right ml-1"></i>
-                </a>
-            </div>
-        </div>
-
-        <!-- Active Requests -->
-        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-yellow-50 text-yellow-600">
-                    <i class="fas fa-tools text-xl"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Active Requests</p>
-                    <div class="flex items-baseline">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-500">Active Requests</p>
                         <p class="text-2xl font-semibold text-gray-900" id="activeRequests">-</p>
-                        <p class="ml-2 text-sm text-gray-500">pending</p>
                     </div>
-                </div>
-            </div>
-            <div class="mt-4">
-                <a href="{{ url_for('view_maintenance_requests') }}" class="text-sm font-medium text-yellow-600 hover:text-yellow-500">
-                    View requests <i class="fas fa-arrow-right ml-1"></i>
-                </a>
-            </div>
-        </div>
-
-        <!-- Urgent Issues -->
-        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-red-50 text-red-600">
-                    <i class="fas fa-exclamation-circle text-xl"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Urgent Issues</p>
-                    <div class="flex items-baseline">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-500">Urgent Issues</p>
                         <p class="text-2xl font-semibold text-gray-900" id="urgentIssues">-</p>
-                        <p class="ml-2 text-sm text-gray-500">critical</p>
                     </div>
-                </div>
-            </div>
-            <div class="mt-4">
-                <a href="{{ url_for('view_maintenance_requests') }}?priority=emergency" class="text-sm font-medium text-red-600 hover:text-red-500">
-                    View urgent issues <i class="fas fa-arrow-right ml-1"></i>
-                </a>
             </div>
         </div>
 
-        <!-- Add Announcements Card -->
+            <!-- Occupancy Chart Card -->
         <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-purple-50 text-purple-600">
-                    <i class="fas fa-bullhorn text-xl"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Announcements</p>
-                    <div class="flex items-baseline">
-                        <p class="text-2xl font-semibold text-gray-900" id="announcementCount">-</p>
-                        <p class="ml-2 text-sm text-gray-500">posted</p>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Occupancy</h3>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-building text-indigo-600"></i>
                     </div>
                 </div>
-            </div>
-            <div class="mt-4">
-                <a href="{{ url_for('manage_announcements') }}" class="text-sm font-medium text-purple-600 hover:text-purple-500">
-                    Manage announcements <i class="fas fa-arrow-right ml-1"></i>
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts Section -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Occupancy Chart -->
-        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Occupancy Overview</h3>
             <div class="h-64">
                 <canvas id="occupancyChart"></canvas>
-            </div>
-        </div>
-        <!-- Maintenance Requests Chart -->
-        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Maintenance Requests</h3>
-            <div class="h-64">
-                <canvas id="maintenanceChart"></canvas>
-            </div>
         </div>
     </div>
 
-    <!-- Reminders Section -->
+            <!-- Maintenance Chart Card -->
     <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-medium text-gray-900">Upcoming Reminders</h3>
+                    <h3 class="text-lg font-medium text-gray-900">Maintenance Overview</h3>
             <div class="flex-shrink-0">
-                <i class="fas fa-bell text-indigo-600"></i>
+                        <i class="fas fa-tools text-indigo-600"></i>
             </div>
         </div>
-        <div class="space-y-4" id="remindersContainer">
-            <div class="flex items-center justify-center h-24 text-gray-500">
-                <i class="fas fa-spinner fa-spin mr-2"></i>
-                Loading reminders...
-            </div>
-        </div>
+                <div class="h-64">
+                    <canvas id="maintenanceChart"></canvas>
+                </div>
     </div>
 
-    <!-- Recent Activity -->
-    <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+            <!-- Recent Activity Card -->
+            <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200 md:col-span-2 lg:col-span-2">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-medium text-gray-900">Recent Activity</h3>
-            <div class="flex items-center space-x-2">
-                <i class="fas fa-history text-gray-400"></i>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-history text-indigo-600"></i>
             </div>
         </div>
         <div class="flow-root">
@@ -181,116 +88,114 @@
                     Loading recent activity...
                 </li>
             </ul>
+                </div>
+            </div>
+
+            <!-- Reminders Card -->
+            <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Upcoming Reminders</h3>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-bell text-indigo-600"></i>
+                    </div>
+                </div>
+                <div class="space-y-4" id="remindersContainer">
+                    <div class="text-center text-gray-500">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>
+                        Loading reminders...
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     {% else %}
     <!-- Tenant Dashboard -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Apartment Info -->
-        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-medium text-gray-900">Your Apartment</h3>
-                <div class="p-2 rounded-full bg-indigo-50 text-indigo-600">
-                    <i class="fas fa-home"></i>
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Apartment Info Card -->
+            <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Your Apartment</h3>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-home text-indigo-600"></i>
+                    </div>
                 </div>
-            </div>
-            {% if apartment %}
-            <dl class="grid grid-cols-1 gap-4">
-                <div class="flex justify-between py-3 border-b border-gray-100">
-                    <dt class="text-sm font-medium text-gray-500">Unit Number</dt>
-                    <dd class="text-sm font-semibold text-gray-900">{{ apartment.unit_number }}</dd>
-                </div>
-                <div class="flex justify-between py-3 border-b border-gray-100">
-                    <dt class="text-sm font-medium text-gray-500">Floor</dt>
-                    <dd class="text-sm font-semibold text-gray-900">{{ apartment.floor }}</dd>
-                </div>
-                <div class="flex justify-between py-3">
-                    <dt class="text-sm font-medium text-gray-500">Type</dt>
-                    <dd class="text-sm font-semibold text-gray-900">{{ apartment.type }}</dd>
-                </div>
-            </dl>
-            {% else %}
-            <div class="text-center py-6">
-                <i class="fas fa-home text-gray-300 text-4xl mb-3"></i>
-                <p class="text-gray-500">No apartment assigned yet</p>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Maintenance Requests -->
-        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-medium text-gray-900">Your Maintenance Requests</h3>
-                <div class="p-2 rounded-full bg-yellow-50 text-yellow-600">
-                    <i class="fas fa-tools"></i>
-                </div>
-            </div>
-            <div id="tenantRequests" class="space-y-4">
-                <div class="text-center py-4">
-                    <i class="fas fa-spinner fa-spin text-gray-400 mr-2"></i>
-                    <span class="text-gray-500">Loading requests...</span>
-                </div>
-            </div>
-            <div class="mt-6">
-                <a href="{{ url_for('submit_maintenance_request') }}" 
-                   class="flex items-center justify-center w-full px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <i class="fas fa-plus mr-2"></i>
-                    Submit New Request
-                </a>
-            </div>
-        </div>
-
-        <!-- Important Notices -->
-        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-medium text-gray-900">Important Notices</h3>
-                <div class="p-2 rounded-full bg-blue-50 text-blue-600">
-                    <i class="fas fa-bell"></i>
-                </div>
-            </div>
-            <div id="tenantNotices" class="space-y-4">
-                <div class="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-info-circle text-yellow-400"></i>
+                        {% if apartment %}
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Unit Number</p>
+                        <p class="mt-1 text-lg text-gray-900">{{ apartment.unit_number }}</p>
+                            </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Floor</p>
+                        <p class="mt-1 text-lg text-gray-900">{{ apartment.floor }}</p>
+                            </div>
+                    <div class="col-span-2">
+                        <p class="text-sm font-medium text-gray-500">Type</p>
+                        <p class="mt-1 text-lg text-gray-900">{{ apartment.type }}</p>
+                            </div>
                         </div>
-                        <div class="ml-3">
-                            <p class="text-sm text-yellow-700">No new notices at this time</p>
+                        {% else %}
+                        <div class="text-center py-6">
+                            <i class="fas fa-home text-gray-300 text-4xl mb-3"></i>
+                            <p class="text-gray-500">No apartment assigned yet</p>
                         </div>
+                        {% endif %}
+            </div>
+
+            <!-- Maintenance Requests Card -->
+            <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Maintenance Requests</h3>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-tools text-indigo-600"></i>
+                    </div>
+                </div>
+                        <div id="tenantRequests" class="space-y-4">
+                            <div class="text-center py-4">
+                                <i class="fas fa-spinner fa-spin text-gray-400 mr-2"></i>
+                                <span class="text-gray-500">Loading requests...</span>
+                            </div>
+                        </div>
+                        <div class="mt-6">
+                            <a href="{{ url_for('submit_maintenance_request') }}" 
+                               class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <i class="fas fa-plus mr-2"></i>
+                                Submit New Request
+                            </a>
+                </div>
+            </div>
+
+            <!-- Announcements Card -->
+            <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Announcements</h3>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-bullhorn text-indigo-600"></i>
+                    </div>
+                </div>
+                        <div id="announcements" class="space-y-4">
+                            <div class="text-center py-4">
+                                <i class="fas fa-spinner fa-spin text-gray-400 mr-2"></i>
+                                <span class="text-gray-500">Loading announcements...</span>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Reminders Section -->
-        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-medium text-gray-900">Upcoming Reminders</h3>
-                <div class="p-2 rounded-full bg-indigo-50 text-indigo-600">
-                    <i class="fas fa-bell"></i>
+            <!-- Reminders Card -->
+            <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Upcoming Reminders</h3>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-bell text-indigo-600"></i>
+                    </div>
                 </div>
-            </div>
-            <div class="space-y-4" id="remindersContainer">
-                <div class="flex items-center justify-center h-24 text-gray-500">
-                    <i class="fas fa-spinner fa-spin mr-2"></i>
-                    Loading reminders...
-                </div>
-            </div>
-        </div>
-
-        <!-- Announcements -->
-        <div class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-medium text-gray-900">Announcements</h3>
-                <div class="p-2 rounded-full bg-purple-50 text-purple-600">
-                    <i class="fas fa-bullhorn"></i>
-                </div>
-            </div>
-            <div id="announcements" class="space-y-4">
-                <div class="text-center py-4">
-                    <i class="fas fa-spinner fa-spin text-gray-400 mr-2"></i>
-                    <span class="text-gray-500">Loading announcements...</span>
+                        <div id="remindersContainer" class="space-y-4">
+                            <div class="text-center py-4">
+                                <i class="fas fa-spinner fa-spin text-gray-400 mr-2"></i>
+                                <span class="text-gray-500">Loading reminders...</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -300,7 +205,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    {% if current_user.is_manager() %}
+    {% if current_user.is_manager %}
     // Fetch real-time data for manager dashboard
     fetch('/api/dashboard/stats')
         .then(response => response.json())
