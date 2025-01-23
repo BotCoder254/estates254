@@ -1,7 +1,7 @@
 import os
 import sys
 
-# Add your project directory to the sys.path
+# Update this path to your username
 project_home = '/home/yourusername/residencehub'
 if project_home not in sys.path:
     sys.path.insert(0, project_home)
